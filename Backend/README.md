@@ -2,21 +2,24 @@
 
 #### Steps to run backend server
 1. Create a virtual environment for python
-'''shell
+
+```shell
     python -m venv virt
-'''
+```
 
 2. Activate the virtual environment
-'''shell
+
+```shell
     source virt/scripts/activate
-'''
+```
 
 3. Install requirements
-'''shell
+
+```shell
     pip install -r requirements.txt
-'''
+```
 
 4. Run Flask server
-'''shell
+```shell
     python main.py
-'''
+```
