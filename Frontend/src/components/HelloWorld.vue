@@ -5,39 +5,16 @@ defineProps({
   msg: String,
 })
 
-const count = ref(0)
 </script>
 
 <template>
-  <h1>{{ msg }}</h1>
-
-  <div class="card">
-    <button type="button" @click="count++">count is {{ count }}</button>
-    <p>
-      Edit
-      <code>components/HelloWorld.vue</code> to test HMR
-    </p>
-  </div>
-
-  <p>
-    Check out
-    <a href="https://vuejs.org/guide/quick-start.html#local" target="_blank"
-      >create-vue</a
-    >, the official Vue + Vite starter
-  </p>
-  <p>
-    Learn more about IDE Support for Vue in the
-    <a
-      href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
-      target="_blank"
-      >Vue Docs Scaling up Guide</a
-    >.
-  </p>
-  <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
+  <h1 class="font-semibold text-4xl shadow-xl p-2">{{ msg }}</h1>
+  <br>
+  <a class="hover:text-blue-700 hover:underline text-2xl" href="https://vite.dev/guide/">Vite</a><br>
+  <a class="hover:text-blue-700 hover:underline text-2xl" href="https://vuejs.org/guide/introduction.html">Vue 3</a><br>
+  <a class="hover:text-blue-700 hover:underline text-2xl" href="https://ui.shadcn.com/docs">Shadcn</a><br>
 </template>
 
 <style scoped>
-.read-the-docs {
-  color: #888;
-}
+
 </style>
