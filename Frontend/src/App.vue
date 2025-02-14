@@ -8,13 +8,13 @@ const route = useRoute()
 
 <template>
   <div>
-    <!-- Show navigation bar only if user is authenticated -->
+    <!-- Show navigation bar only if user is authenticated
     <nav v-if="store.state.isAuthenticated" class="bg-gray-800 text-white p-4 flex justify-between">
       <span class="text-xl">Dashboard</span>
       <button @click="store.dispatch('logout')" class="bg-red-500 px-4 py-2 rounded">
         Logout
       </button>
-    </nav>
+    </nav> -->
 
     <!-- Display dynamic pages based on route -->
     <router-view></router-view>
