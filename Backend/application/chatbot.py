@@ -2,20 +2,31 @@ import os
 import requests
 import json
 from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer
 from typing import Optional, List, Dict, Any
 from langchain_core.language_models.llms import LLM
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain_community.vectorstores import FAISS
+from langchain.chains import LLMChain, RetrievalQA
 from langchain.memory import ConversationBufferMemory
 from fpdf import FPDF
 
 load_dotenv()
 
-import os
-import requests
-from typing import List, Optional
+class MyEmbeddings:
+    def __init__(self, model_name="jinaai/jina-embeddings-v2-small-en"):
+        self.model = SentenceTransformer(model_name, trust_remote_code=True)
 
-# Custom LLM class
+    def __call__(self, text):
+        if isinstance(text, str):
+            return self.model.encode(text)
+
+    def embed_documents(self, documents):
+        return self.model.encode(documents)
+
+    def embed_query(self, query):
+        return self.model.encode(query)
+
 class CustomLLM(LLM):
     model_name: str
     api_url: Optional[str] = None
@@ -52,10 +63,16 @@ class CustomLLM(LLM):
     def _llm_type(self) -> str:
         return self.model_name
 
-# the custom LLM using the API endpoint
+embedding_model = MyEmbeddings()
 llm = CustomLLM(model_name="tiiuae/falcon-7b-instruct")
 
-# prompt templates
+vectorstore = FAISS.load_local(
+    r'E:\chatbot\admin\vector_store.bin',
+    embedding_model,
+    allow_dangerous_deserialization=True
+)
+
+# Prompt templates for other contexts
 assignment_prompt = PromptTemplate(
     input_variables=["assignment_data", "user_query"],
     template=(
@@ -63,17 +80,6 @@ assignment_prompt = PromptTemplate(
         "Assignment details: {assignment_data}\n"
         "User query: {user_query}\n"
         "Provide a helpful and detailed response."
-        
-    )
-)
-
-lecture_prompt = PromptTemplate(
-    input_variables=["lecture_data", "user_query"],
-    template=(
-        "You are an AI assistant helping students understand lectures.\n"
-        "Lecture content: {lecture_data}\n"
-        "User query: {user_query}\n"
-        "Provide a clear and concise explanation."
     )
 )
 
@@ -97,24 +103,50 @@ faq_prompt = PromptTemplate(
     )
 )
 
-#LLM chain with the prompts and llms
+# Chains for other contexts
 assignment_chain = LLMChain(llm=llm, prompt=assignment_prompt, verbose=True)
-lecture_chain = LLMChain(llm=llm, prompt=lecture_prompt, verbose=True)
 programming_chain = LLMChain(llm=llm, prompt=programming_prompt, verbose=True)
 faq_chain = LLMChain(llm=llm, prompt=faq_prompt, verbose=True)
 
-# memory and chat history
+
+def lecture_query(llm, vectorstore, query):
+    prompt_template = """
+    You are a document assistant that helps students understand lectures.
+    Please provide the most accurate response based solely on the provided context.
+
+    Context:
+    {context}
+
+    Question:
+    {question}
+
+    Assistant:
+    """
+    prompt = PromptTemplate(
+        input_variables=["context", "question"],
+        template=prompt_template
+    )
+    qa = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 10}),
+        return_source_documents=True,
+        chain_type_kwargs={"prompt": prompt}
+    )
+    result = qa({"query": query})
+    
+    assistant_answer = result.get("result", "").strip()
+    if "Assistant:" in assistant_answer:
+        assistant_answer = assistant_answer.split("Assistant:")[1].strip()
+    return assistant_answer
+
 memory = ConversationBufferMemory()
 chat_history = []
 
 def chatbot(user_context, user_query):
-    """
-    Enhanced chatbot function with proper input handling.
-    """
     try:
         context_data = {
             "assignment": "Solve questions on calculus involving derivatives.",
-            "lecture": "Today's lecture is about Newton's laws of motion.",
             "programming": "Write a Python function to calculate Fibonacci numbers.",
             "faq": json.dumps({
                 "What is Newton's first law?": "An object remains at rest or in uniform motion unless acted upon by a force.",
@@ -127,33 +159,23 @@ def chatbot(user_context, user_query):
                 assignment_data=context_data["assignment"],
                 user_query=user_query
             )
-            
         elif user_context == "lecture":
-            response = lecture_chain.predict(
-                lecture_data=context_data["lecture"],
-                user_query=user_query
-            )
-            
+            response = lecture_query(llm, vectorstore, user_query)
+
         elif user_context == "programming":
             response = programming_chain.predict(
                 problem_statement=context_data["programming"],
                 user_query=user_query
             )
-            
         elif user_context == "faq":
             response = faq_chain.predict(
                 faq_data=context_data["faq"],
                 user_query=user_query
             )
-            
         else:
             return "Invalid context provided."
 
-        # Save interaction in conversation memory
-        memory.save_context(
-            {"input": user_query},
-            {"output": response}
-        )
+        memory.save_context({"input": user_query}, {"output": response})
         return response
 
     except requests.exceptions.RequestException as e:
@@ -161,6 +183,7 @@ def chatbot(user_context, user_query):
     except Exception as e:
         return f"Processing Error: {str(e)}"
 
+# Rest of the functions remain unchanged
 def store_chat(user_input, bot_response):
     global chat_history
     chat_history.append({"User": user_input, "Bot": bot_response})
@@ -177,19 +200,14 @@ def export_chat_as_pdf():
     pdf.output("chat_history.pdf")
 
 def extract_final_answer(response: str, marker: str = "Provide a helpful and detailed response.") -> str:
-    """
-    Returns everything after the marker in the given response.
-    """
     if marker in response:
         return response.split(marker, 1)[-1].strip()
     return response.strip()
 
 if __name__ == "__main__":
-    # Example usage
+    # Test lecture query
     response = chatbot(
-        user_context="assignment",
-        user_query="Can you explain how to find derivatives?"
+        user_context="lecture",
+        user_query="Explain Newton's laws of motion"
     )
-    
     print(response)
-    
