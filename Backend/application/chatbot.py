@@ -138,6 +138,8 @@ def lecture_query(llm, vectorstore, query):
     assistant_answer = result.get("result", "").strip()
     if "Assistant:" in assistant_answer:
         assistant_answer = assistant_answer.split("Assistant:")[1].strip()
+    if "Question:" in assistant_answer:
+        assistant_answer = assistant_answer.split("Question:")[0].strip()
     return assistant_answer
 
 memory = ConversationBufferMemory()
