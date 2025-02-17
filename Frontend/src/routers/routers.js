@@ -9,10 +9,16 @@ const routes = [
    },
    {
      path: '/dashboard',
-     name: 'Dashboard',
-     component: () => import('@/views/Dashboard.vue'),
+     name: 'Courses',
+     component: () => import('@/views/Courses.vue'),
      meta: { requiresAuth: true } // Protect this route
-   }
+   },
+   {
+    path: '/coursecontent',
+    name: 'Content',
+    component: () => import('@/views/CourseContent.vue'),
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({

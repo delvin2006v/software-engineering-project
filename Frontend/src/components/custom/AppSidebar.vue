@@ -22,13 +22,13 @@ import Home from '@/assets/icons/house.png';
 const items = reactive([
   {
     title: 'Home',
-    url: '/',
+    url: '/courses',
     icon: Home,
   },
 
   {
     title: 'Dashboard',
-    url: '/dashboard',
+    url: '#',
     icon: Home,
   },
   {
@@ -51,7 +51,7 @@ const items = reactive([
 
 <template>
   <Sidebar class="animated-sidebar">
-    <SidebarContent>
+    <SidebarContent class="dark: bg-gray-100">
       <SidebarGroup>
         <SidebarGroupLabel class="heading">IIT BS Degree</SidebarGroupLabel>
         <SidebarGroupContent>

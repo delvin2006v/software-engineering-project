@@ -1,6 +1,9 @@
 <script setup>
 import { useStore } from 'vuex'
 import { useRoute } from 'vue-router'
+import Navbar from "@/components/custom/layout/Navbar.vue";
+import AppLayout from "@/components/custom/layout/AppLayout.vue";
+import Footer from "@/components/custom/layout/Footer.vue";
 
 const store = useStore()
 const route = useRoute()
@@ -8,19 +11,22 @@ const route = useRoute()
 
 <template>
   <div>
-    <!-- Show navigation bar only if user is authenticated
-    <nav v-if="store.state.isAuthenticated" class="bg-gray-800 text-white p-4 flex justify-between">
-      <span class="text-xl">Dashboard</span>
-      <button @click="store.dispatch('logout')" class="bg-red-500 px-4 py-2 rounded">
-        Logout
-      </button>
-    </nav> -->
+    <div v-if="store.state.isAuthenticated">
+      <Navbar v-if="store.state.isAuthenticated"/>
 
-    <!-- Display dynamic pages based on route -->
-    <router-view></router-view>
+      <AppLayout v-if="store.state.isAuthenticated">
+        <!-- <router-view />
+        <Footer/> -->
+      </AppLayout>
+
+    </div>
+    <div v-else>
+      <router-view/>
+    </div>
   </div>
 </template>
 
 <style scoped>
 /* Add any custom styles if needed */
 </style>
+

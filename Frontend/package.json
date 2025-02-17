@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/vue": "^1.7.23",
     "@radix-icons/vue": "^1.0.0",
     "@vueuse/core": "^12.6.1",
     "class-variance-authority": "^0.7.1",

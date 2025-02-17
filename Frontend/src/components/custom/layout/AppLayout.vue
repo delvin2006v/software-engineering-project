@@ -1,6 +1,6 @@
 <script>
     import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-    import AppSidebar from "@/components/custom/AppSidebar.vue";
+    import AppSidebar from "@/components/custom/AppSidebar2.vue";
 
     export default {
     name: "AppLayout",
