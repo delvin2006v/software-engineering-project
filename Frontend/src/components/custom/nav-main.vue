@@ -43,9 +43,9 @@ defineProps({
                 <template v-for="subItem in item.items" :key="subItem.title">
                   <SidebarMenuSubItem>
                     <SidebarMenuSubButton asChild>
-                      <a :href="subItem.url">
+                      <router-link :to="subItem.url">
                         <span>{{ subItem.title }}</span>
-                      </a>
+                      </router-link>
                     </SidebarMenuSubButton>
                   </SidebarMenuSubItem>
                 </template>

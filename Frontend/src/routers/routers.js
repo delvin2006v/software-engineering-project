@@ -14,6 +14,12 @@ const routes = [
      meta: { requiresAuth: true } // Protect this route
    },
    {
+    path: '/completedcourse',
+    name: 'ComplatedCourse',
+    component: () => import('@/views/CompletedCourse.vue'),
+    meta: { requiresAuth: true }
+  },
+   {
     path: '/coursecontent',
     name: 'Content',
     component: () => import('@/views/CourseContent.vue'),

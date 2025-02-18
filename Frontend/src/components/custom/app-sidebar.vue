@@ -46,8 +46,8 @@ const data = ref({
       icon: NotebookPen, // Set to null if using a custom image
       isActive: true,
       items: [
-        { title: "Current Course", url: "#" },
-        { title: "Completed Course", url: "#" },
+        { title: "Current Course", url: "/dashboard" },
+        { title: "Completed Course", url: "/completedcourse" },
       ],
     },
     {
