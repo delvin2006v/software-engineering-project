@@ -1,5 +1,8 @@
 <script setup>
 import { defineProps } from "vue"
+import { useStore } from "vuex"
+import { useRouter } from "vue-router"
+
 import {
   BadgeCheck,
   Bell,
@@ -30,6 +33,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
+// Vuex store
+const store = useStore()
+const router = useRouter()
+
 // Get isMobile from sidebar composable
 const { isMobile } = useSidebar()
 
@@ -37,6 +44,12 @@ const { isMobile } = useSidebar()
 defineProps({
   user: Object,
 })
+
+// Logout function
+const handleLogout = () => {
+  store.dispatch("logout") // Vuex logout action
+  router.push("/") // Redirect to login page
+}
 </script>
 
 <template>
@@ -80,19 +93,12 @@ defineProps({
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem>
-              <Sparkles />
-              Upgrade to Pro
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem>
               <BadgeCheck />
-              Account
+              Profile
             </DropdownMenuItem>
             <DropdownMenuItem>
               <CreditCard />
-              Billing
+              Batches
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Bell />
@@ -100,7 +106,7 @@ defineProps({
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem @click="handleLogout">
             <LogOut />
             Log out
           </DropdownMenuItem>

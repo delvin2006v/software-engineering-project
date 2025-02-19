@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue"
+import { useStore } from 'vuex';
 
 import {
   School,
@@ -9,7 +10,8 @@ import {
   FolderKanban,
   NotebookPen,
   FileSearch,
-  Presentation
+  Presentation,
+  AlignEndHorizontal 
 } from "lucide-vue-next"
 
 import NavMain from "./nav-main.vue"
@@ -24,22 +26,55 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// Sample data using ref
-const data = ref({
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "../../assets/images/iitm.jpg",
-  },
-  teams: [
-    {
-      name: "IITM BS Degree",
-      logoUrl: 'src/assets/images/iitm.png',
-      plan: "DataScience",
-    },
+//Getting role from store
+const store = useStore();
 
-  ],
-  navMain: [
+let navForTA  = [
+  {
+      title: "Courses",
+      url: "#",
+      icon: NotebookPen, // Set to null if using a custom image
+      isActive: true,
+      items: [
+        { title: "Your Courses", url: "/dashboard" },
+        { title: "TA Courses", url: "/ta-dashboard/TA-course" },
+      ],
+      
+    },
+    {
+      title :"Statistics",
+      url:'#',
+      icon: AlignEndHorizontal,
+      items: [
+        { title: "Student Statistics", url: "/dashboard" },
+        { title: "TA", url: "/completedcourse" },
+      ],
+    }
+]
+
+let navForInstructor  = [
+  {
+      title: "Courses",
+      url: "#",
+      icon: NotebookPen, 
+      isActive: true,
+      items: [
+        { title: "Courses", url: "/instructor-dashboard/TA-course" },
+      ],
+      
+    },
+    {
+      title :"Statistics",
+      url:'#',
+      icon: AlignEndHorizontal,
+      items: [
+        { title: "Student Statistics", url: "/instructor-dashboard/TA-course" },
+        { title: "TA", url: "/instructor-dashboard/TA-course" },
+      ],
+    }
+]
+
+let navForStudents = [
     {
       title: "Courses",
       url: "#",
@@ -64,24 +99,34 @@ const data = ref({
       url: "#",
       icon: FileSearch,
       items: [
-        { title: "Introduction", url: "#" },
-        { title: "Get Started", url: "#" },
-        { title: "Tutorials", url: "#" },
-        { title: "Changelog", url: "#" },
+        { title: "All Docs", url: "/document" },
+        { title: "Submited Docs", url: "/document" },
       ],
     },
+  ]
+  let navMain = store.state.user.role === "Instructor" 
+  ? navForInstructor 
+  : store.state.user.role === "TA" 
+    ? navForTA 
+    : navForStudents;
+
+
+// Sample data using ref
+const data = ref({
+  user: {
+    name: "IITM",
+    email: "m@IITM.com",
+    avatar: "../../assets/images/iitm.jpg",
+  },
+  teams: [
     {
-      title: "Submited Docs",
-      url: "#",
-      icon: FolderKanban,
-      items: [
-        { title: "General", url: "#" },
-        { title: "Team", url: "#" },
-        { title: "Billing", url: "#" },
-        { title: "Limits", url: "#" },
-      ],
+      name: "IITM BS Degree",
+      logoUrl: 'src/assets/images/iitm.png',
+      plan: "DataScience",
     },
+
   ],
+  navMain: navMain,
   projects: [
     {
       name: "Hall Ticket & Exam Cities",

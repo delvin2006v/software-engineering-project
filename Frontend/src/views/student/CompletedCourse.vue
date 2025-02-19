@@ -78,7 +78,7 @@ const courses = ref([
       >
         <Card class="overflow-hidden shadow-lg rounded-lg">
           <img
-            src="../assets/images/AiCourse.jpeg"
+            src="../../assets/images/AiCourse.jpeg"
             alt="Course Image"
             class="w-full h-48 object-cover rounded"
           />

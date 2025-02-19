@@ -40,7 +40,7 @@ defineProps({
               <span>{{ item.name }}</span>
             </a>
           </SidebarMenuButton>
-          <DropdownMenu>
+          <!-- <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarMenuAction showOnHover>
                 <MoreHorizontal />
@@ -65,7 +65,7 @@ defineProps({
                 <span>Delete Project</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> -->
         </SidebarMenuItem>
       </template>
       <SidebarMenuItem>

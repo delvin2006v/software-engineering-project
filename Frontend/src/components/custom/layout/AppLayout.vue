@@ -16,7 +16,6 @@
     <SidebarProvider>
       <AppSidebar />
       <main class="flex-1">
-        <SidebarTrigger />
         <slot />
       </main>
     </SidebarProvider>

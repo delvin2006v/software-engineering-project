@@ -21,7 +21,7 @@ import Footer from "./layout/Footer.vue";
 <template>
    <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset class="mt-5">
         <header class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div class="flex items-center gap-2 px-4">
             <SidebarTrigger class="-ml-1" />
@@ -50,7 +50,7 @@ import Footer from "./layout/Footer.vue";
           <div class="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
         </div> -->
         <RouterView></RouterView>
-        <Footer></Footer>
+        <!-- <Footer></Footer> -->
       </SidebarInset>
     </SidebarProvider>
 </template>

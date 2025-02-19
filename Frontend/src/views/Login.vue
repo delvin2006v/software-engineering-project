@@ -15,11 +15,19 @@ const handleLogin = () => {
       username: username.value,
       role: role.value
     })
-    router.push('/dashboard') // Redirect to dashboard
+    if(role.value =='TA'){
+      router.push('/dashboard')
+    } else if (role.value === 'Instructor') {
+      router.push('/instructor-dashboard/TA-course'); // Redirect TA to Tadashboard
+    } else{
+
+      router.push('/dashboard') // Redirect to dashboard
+    }
   } else {
     errorMessage.value = 'Please enter both Username and Role!'
   }
 }
+
 </script>
 
 <template>
@@ -52,8 +60,8 @@ const handleLogin = () => {
           </div>
 
           <div>
+            <!-- <div class="mt-2">
             <label for="role" class="block text-sm font-medium text-gray-900">Role</label>
-            <div class="mt-2">
               <input 
                 v-model="role" 
                 type="text" 
@@ -61,9 +69,16 @@ const handleLogin = () => {
                 placeholder="Enter your role"
                 class="block w-full rounded-md border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:ring-2 focus:ring-indigo-600 focus:outline-none sm:text-sm transition-all duration-300"
               />
-            </div>
+            This componenet has been changed by Kishar / time 5:29 date 18-02-25
+            </div>  -->
+            <label for="countries" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Role</label>
+            <select v-model="role"  id="countries" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+              <option selected>Choose a role</option>
+              <option value="Student">Student</option>
+              <option value="TA">TA</option>
+              <option value="Instructor">Instructor</option>
+            </select>
           </div>
-
           <!-- Error Message -->
           <p v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</p>
 
@@ -76,13 +91,6 @@ const handleLogin = () => {
             </button>
           </div>
         </div>
-
-        <p class="mt-8 text-center text-sm text-gray-500">
-          Don't have an account?
-          <a href="#" class="font-semibold text-indigo-600 hover:text-indigo-500 transition-all duration-300">
-            Signup
-          </a>
-        </p>
       </div>
     </div>
   </div>

@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Disclosure, DisclosureButton } from '@headlessui/vue';
 import { ChevronDown, ChevronRight, Play, BookOpen, ClipboardCheck, Pencil, Menu } from 'lucide-vue-next';
+import Aibot from './Aibot.vue';
 
 const courseContent = [
   {
@@ -383,6 +384,7 @@ function submitAssignment() {
                 </button>
               </div>
             </Transition>
+            <Aibot></Aibot>
           </div>
         </div>
       </div>

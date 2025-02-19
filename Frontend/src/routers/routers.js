@@ -10,19 +10,56 @@ const routes = [
    {
      path: '/dashboard',
      name: 'Courses',
-     component: () => import('@/views/Courses.vue'),
+     component: () => import('@/views/student/Courses.vue'),
      meta: { requiresAuth: true } // Protect this route
    },
-   {
+
+    {
+    path: '/instructor-dashboard',
+    name: 'Instructor Dashboard',
+    component: () => import('@/views/InstructorDashboard.vue'),
+    children:[
+      {
+        path: 'TA-course',
+        component: () => import('@/views/TA/Tacourses.vue'),
+      },
+    ],
+    meta: { requiresAuth: true } // Protect this route
+    },
+
+  {
+    path: '/ta-dashboard',
+    name: 'TA Dashboard',
+    component: () => import('@/views/InstructorDashboard.vue'),
+    children:[
+      {
+        path: 'TA-course',
+        component: () => import('@/views/TA/Tacourses.vue'),
+      },
+      {
+        path: 'TA-upload',
+        component: () => import('@/views/TA/Content-upload.vue'),
+      },
+    ],
+    meta: { requiresAuth: true } // Protect this route
+  },
+
+  {
     path: '/completedcourse',
     name: 'ComplatedCourse',
-    component: () => import('@/views/CompletedCourse.vue'),
+    component: () => import('@/views/student/CompletedCourse.vue'),
     meta: { requiresAuth: true }
   },
-   {
+  {
     path: '/coursecontent',
     name: 'Content',
-    component: () => import('@/views/CourseContent.vue'),
+    component: () => import('@/views/student/CourseContent.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/document',
+    name: 'Documnet',
+    component: () => import('@/views/student/Document.vue'),
     meta: { requiresAuth: true }
   }
 ]
