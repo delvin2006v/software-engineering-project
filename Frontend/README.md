@@ -1,9 +1,6 @@
 #### This is the folder of frontend
 
-#### Navigate to frontend folder
-```bash
-cd Frontend
-```
+#### In frontend folder
 
 #### Install required dependencies
 ```bash
