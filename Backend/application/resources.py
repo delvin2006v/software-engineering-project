@@ -1,5 +1,6 @@
 from flask_restful import Resource
-from .extensions import security, output
+from .extensions import security
+from .utils import output
 from flask_restful import fields, marshal
 from .models import User
 

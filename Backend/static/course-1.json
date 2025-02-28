@@ -1,0 +1,127 @@
+[
+	{
+		"id": 1,
+		"title": "Week 1",
+		"items": [
+			{
+				"id": 1,
+				"type": "lecture",
+				"title": "L1.1: Introduction",
+				"url": "https://youtu.be/8ndsDXohLMQ"
+			},
+			{
+				"id": 2,
+				"type": "lecture",
+				"title": "L1.2: Introduction to Replit",
+				"url": "https://youtu.be/NgZZ0HIUqbs"
+			},
+			{
+				"id": 3,
+				"type": "lecture",
+				"title": "L1.3: More on Replit, print and Common Mistakes",
+				"url": "https://youtu.be/As7_aq6XGfI"
+			},
+			{
+				"id": 4,
+				"type": "lecture",
+				"title": "L1.4: A Quick Introduction to Variables",
+				"url": "https://youtu.be/Yg6xzi2ie5s"
+			},
+			{
+				"id": 5,
+				"type": "lecture",
+				"title": "L1.5: Variables and Input Statement",
+				"url": "https://youtu.be/ruQb8jzkGyQ"
+			},
+			{
+				"id": 6,
+				"type": "practice-assignment",
+				"title": "Practice assignment 1 - Not graded",
+				"questions": [
+					{
+						"id": 1,
+						"question": "What will be the output of the following statement?\nprint('15 % 3 * 2 + 2')",
+						"type": "option-one",
+						"options": [
+							"12",
+							"2",
+							"15 % 3 * 2 + 2",
+							"'15 % 3 * 2 + 2'"
+						],
+						"answer": [
+							"15 % 3 * 2 + 2",
+						],
+						"points": 1
+					},
+					{
+						"id": 2,
+						"question": "What will be the output of the following statement?\nprint(\"a + 'b' + c + '' + d\")",
+						"type": "option-one",
+						"options": [
+							"a + 'b' + c + '' + d",
+							"\"a + 'b' + c + '' + d \"",
+							"a + b + c + '' + d",
+							"a + ''b'' + c + '' + d"
+						],
+						"answer": [
+							"a + 'b' + c + '' + d",
+						],
+						"points": 1
+					},
+					{
+						"id": 3,
+						"question": "A snippet of code gives the following output when executed:\n1 2 3 4 5\nThere is exactly one space between any two consecutive integers. Which of the following options correspond to the correct code snippet?(MSQ).",
+						"type": "option-many",
+						"options": [
+							"print(1 2 3 4 5)",
+							"print('1 2 3 4 5') # there is a space between consecutive numbers",
+							"print(1)\nprint(2)\nprint(3)\nprint(4)\nprint(5)",
+							"print(1, 2, 3, 4, 5)"
+						],
+						"answer": [
+							"print('1 2 3 4 5') # there is a space between consecutive numbers",
+							"print(1, 2, 3, 4, 5)"
+						],
+						"points": 1
+					},
+					{
+						"id": 4,
+						"question": "What will be the type of the following expressions?\n13 % 5 // 2 * 30 ** 5\n\"@Python\"\n20 ** 10 / 2 + 25 - 70 \n(5 > 3) and False\n20 * 100.0 // 11 % 5\n\n(A) float\n(B) int\n(C) str\n(D) bool",
+						"type": "option-one",
+						"options": [
+							"1 - (A), 2 - (C), 3 - (B), 4 - (D), 5 - (A)",
+							"1 - (B), 2 - (C), 3 - (A), 4 - (D), 5 - (A)",
+							"1 - (A), 2 - (C), 3 - (B), 4 - (D), 5 - (B)",
+							"1 - (B), 2 - (C), 3 - (A), 4 - (D), 5 - (B)",
+						],
+						"answer": [
+							"1 - (B), 2 - (C), 3 - (A), 4 - (D), 5 - (A)",
+						],
+						"points": 1
+					},
+					{
+						"id": 5,
+						"question": "Consider the following snippet of code:\nw1 = input()\nw2 = input()\nprint(w1 + w2)\n\nWhat is the output of the code given above for the following input? NAT\n10\n20",
+						"type": "text",
+						"answer": [
+							"1020",
+						],
+						"points": 1
+					},
+				]
+			},
+			{
+				"id": 7,
+				"type": "programming-assignment",
+				"title": "PPA 1 Not Graded",
+				"question": "Print the first 5 positive integers in the ascending order with one number in each line",
+				"cases": [
+					{
+						"input": "",
+						"output": "1\n2\n3\n4\n5"
+					}
+				]
+			}
+		]
+	}
+]
