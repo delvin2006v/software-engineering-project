@@ -225,9 +225,10 @@ from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain.chains import LLMChain, RetrievalQA
 from fpdf import FPDF
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, BaseChatMessageHistory
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables import RunnableWithMessageHistory, RunnableLambda
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
@@ -306,7 +307,7 @@ def get_by_session_id(session_id: str) -> BaseChatMessageHistory:
 embedding_model = MyEmbeddings()
 llm = CustomLLM(model_name="tiiuae/falcon-7b-instruct")
 vectorstore = FAISS.load_local(
-    r'E:\chatbot\admin\vector_store.bin',
+    r'E:\chat\soft-engg-project-jan-2025-se-Jan-37\Backend\application\vector_store.bin',
     embedding_model,
     allow_dangerous_deserialization=True
 )
