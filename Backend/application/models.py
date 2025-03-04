@@ -14,6 +14,7 @@ class User(db.Model, UserMixin) :
     active = db.Column(db.Boolean, nullable=False)
     fs_uniquifier = db.Column(db.String, nullable=False)
     roles = db.relationship('Role', secondary='roles_users')
+    courses = db.relationship('Course', secondary='enrollment')
 
 # Role Model
 class Role(db.Model, RoleMixin) :
@@ -58,6 +59,7 @@ class Submission(db.Model) :
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     assignment_id = db.Column(db.String, nullable=False)
+    content = db.Column(db.String, nullable=False)
     score = db.Column(db.Integer, nullable=False)
 
 # Chat Model
@@ -68,8 +70,20 @@ class Chat(db.Model) :
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
     session_id = db.Column(db.Integer, nullable=False, unique=True)
-
+    time = db.Column(db.DateTime, nullable=False)
+    
     # unique constraint
     # to ensure that no two records have the same user, course and session_id
     db.UniqueConstraint(user_id, course_id, session_id)
 
+# Course Material Model
+class CourseMaterial(db.Model) :
+    ''' Store the course material details '''
+    __tablename__ = 'coursematerial'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    title = db.Column(db.String, nullable=False)
+    type = db.Column(db.String, nullable=False)
+    path = db.Column(db.String, nullable=False)
+    vector_id = db.Column(db.Integer, nullable=False)

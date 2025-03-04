@@ -33,9 +33,14 @@ app, api = create_app()
 from application.views import *
 
 # importing api
-from application.resources import UserApi
+from application.resources import UserApi, CourseApi, SubmissionApi, MaterialApi, ChatOutlineApi, ChatApi
 
-api.add_resource(UserApi, '/api/users/<int:id>', '/api/users')
+api.add_resource(UserApi, '/users/<int:id>', '/users')
+api.add_resource(CourseApi, '/courses/<int:id>', '/courses')
+api.add_resource(SubmissionApi, '/submissions/<string:id>', '/submissions')
+api.add_resource(MaterialApi, '/courses/<int:course_id>/materials')
+api.add_resource(ChatOutlineApi, '/chats/<int:course_id>')
+api.add_resource(ChatApi, '/chats/<int:course_id>/<int:session_id>')
 
 # start dev server
 if __name__ == '__main__' :
