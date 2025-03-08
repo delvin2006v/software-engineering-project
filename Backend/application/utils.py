@@ -2,6 +2,7 @@ from functools import wraps
 from flask_security import current_user
 from flask import request, url_for
 from .models import Token
+from .extensions import security
 import subprocess
 import os
 from pathlib import Path
@@ -10,6 +11,19 @@ from fpdf import FPDF
 crntdir = str(Path(os.path.abspath(os.path.dirname(__file__))).parents[0])
 code_dir = crntdir + '/static/codes/'
 export_dir = crntdir + '/static/exports'
+
+
+# unauth handler
+def unauth_handler(mechanics=None, headers=None) :
+    return output(401, 'Authentication Failed')
+
+security.unauthn_handler(unauth_handler)
+
+# unauthz handler
+def unauthz_handler(func, params=None) :
+    return output(402, 'You are not allowed to access that resource')
+
+security.unauthz_handler(unauthz_handler)
 
 # Output in JSON
 def output(code, msg, data=None) :
@@ -88,7 +102,7 @@ def evaluate_submission(key, response) :
             res[i]['output'] = output.stdout + output.stderr
             response = {'code': response, 'cases': res}
 
-    return {'points': score, 'questions': response}
+    return {'points': score, 'content': response}
 
 # Export chat as pdf
 def export_chat(history, session_id) :

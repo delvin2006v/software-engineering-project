@@ -10,39 +10,12 @@ from werkzeug.utils import secure_filename
 import os
 from pathlib import Path
 from datetime import datetime
+from sqlalchemy import desc
 
 user_datastore = security.datastore
 
 crntdir = str(Path(os.path.abspath(os.path.dirname(__file__))).parents[0])
 static_dir = crntdir + '/static'
-
-user_fields = {
-    'id': fields.Integer,
-    'username': fields.String,
-}
-
-# User Api
-class UserApi(Resource) :
-
-    def get(self, id=None) :
-        if id :
-            user = user_datastore.find_user(id=id)
-            if user :
-                data = {'user': marshal(user, user_fields)}
-                return output(200, 'User fetched successfully', data)
-            else :
-                return output(404, 'User not found')
-        else :
-            users = User.query.all()
-            if users :
-                data = {'users': [marshal(user, user_fields) for user in users]}
-                return output(200, 'Users fetched successfully', data)
-
-
-course_fields = {
-    'id': fields.Integer,
-    'name': fields.String
-}
 
 # Course Api
 class CourseApi(Resource) :
@@ -88,10 +61,10 @@ class SubmissionApi(Resource) :
     @validate_token()
     @roles_required('student')
     def get(self, id):
-        submission = Submission.query.filter_by(user_id=current_user.id, assignment_id=id).all()[::-1][0]
+        submission = Submission.query.filter_by(user_id=current_user.id, assignment_id=id).order_by(desc(Submission.id)).first()
         if submission :
             data = {'submission': marshal(submission, submission_fields)}
-            return output(200, 'Sumbmission fetched successfully', data)
+            return output(200, 'Submission fetched successfully', data)
         else :
             return output(404, 'You haven\'t made any submission yet')
 
@@ -138,7 +111,7 @@ class SubmissionApi(Resource) :
                         submission = Submission(
                             user_id=current_user.id, 
                             assignment_id=assignment_id, 
-                            content=json.dumps(result['questions']),
+                            content=json.dumps(result['content']),
                             score=result['points']
                             )
 
@@ -157,13 +130,9 @@ class SubmissionApi(Resource) :
 material_fields = {
     'id': fields.Integer,
     'title': fields.String,
-    'type': fields.String
+    'type': fields.String,
+    'path': fields.String
 }
-
-material_parser = reqparse.RequestParser()
-material_parser.add_argument('id')
-material_parser.add_argument('title')
-material_parser.add_argument('type')
 
 # Materials Api
 class MaterialApi(Resource) :
@@ -206,10 +175,14 @@ class MaterialApi(Resource) :
         if not flag :
             return output(402, 'You have not enrolled to the course')
 
-        data = material_parser.parse_args()
-        title = data['title']
-        file_type = data['type']
-        file = request.files.get('file')
+
+        title = request.form['title']
+        file_type = request.form['type']
+        file = request.files['file']
+
+        if (file.filename == '') or (not title) or (not file_type) :
+            return output(403, 'Missing input fields')
+
 
         filename = secure_filename(str(title) + '.' + file.filename.split('.')[-1])
         file.save(os.path.join(static_dir + '/uploads/', filename))
@@ -219,7 +192,7 @@ class MaterialApi(Resource) :
                 course_id=course_id,
                 title=title,
                 type=file_type,
-                path=url_for('static', '/uploads/' + filename),
+                path=url_for('static', filename='uploads/' + filename),
                 vector_id=10 # <- To be modified
             )
 
@@ -242,11 +215,13 @@ class MaterialApi(Resource) :
         if not flag :
             return output(402, 'You have not enrolled to the course')
 
-        data = material_parser.parse_args()
-        title = data['title']
-        file_type = data['type']
-        id = data['id']
-        file = request.files.get('file')
+        id = request.form['id']
+        title = request.form['title']
+        file_type = request.form['type']
+        file = request.files['file']
+
+        if (not id) or (not title) or (not file_type):
+            return output(403, 'Missing input fields')
 
         material = CourseMaterial.query.filter_by(id=id,course_id=course_id).first()
 
@@ -261,7 +236,7 @@ class MaterialApi(Resource) :
             filename = secure_filename(str(title) + '.' + file.filename.split('.')[-1])
             file.save(os.path.join(static_dir + '/uploads/', filename))
 
-            material.path = url_for('static', '/uploads/' + filename)
+            material.path = url_for('static', filename='uploads/' + filename)
             material.vector_id = 20 # <- to be modified
             
         db.session.commit()
@@ -271,7 +246,7 @@ class MaterialApi(Resource) :
     @auth_required('token')
     @validate_token()
     @roles_accepted('ta', 'instructor')
-    def delete(self, course_id) :
+    def delete(self, course_id, material_id) :
 
         # check for enrollment
         flag = False
@@ -282,13 +257,7 @@ class MaterialApi(Resource) :
         if not flag :
             return output(402, 'You have not enrolled to the course')
 
-        data = material_parser.parse_args()
-        title = data['title']
-        file_type = data['type']
-        id = data['id']
-        file = request.files.get('file')
-
-        material = CourseMaterial.query.filter_by(id=id,course_id=course_id).first()
+        material = CourseMaterial.query.filter_by(id=material_id,course_id=course_id).first()
 
         if not material :
             return output(404, 'Material not found')
@@ -305,7 +274,8 @@ chat_history = dict()
 
 chat_fields = {
     'id': fields.Integer,
-    'time': fields.DateTime(dt_format='rfc822')
+    'time': fields.DateTime(dt_format='rfc822'),
+    'session_id': fields.String
 }
 
 chat_parser = reqparse.RequestParser()
@@ -320,6 +290,15 @@ class ChatOutlineApi(Resource) :
     @validate_token()
     @roles_accepted('student')
     def get(self, course_id) :
+
+        # check for enrollment
+        flag = False
+        for course in current_user.courses :
+            if course.id == course_id :
+                flag = True
+                break
+        if not flag :
+            return output(402, 'You have not enrolled to the course')
 
         chats = Chat.query.filter_by(user_id=current_user.id, course_id=course_id).all()
 
@@ -337,6 +316,15 @@ class ChatOutlineApi(Resource) :
         data = chat_parser.parse_args()
         query = data['query']
         tag = data['tag'] # <- used later
+
+        # check for enrollment
+        flag = False
+        for course in current_user.courses :
+            if course.id == course_id :
+                flag = True
+                break
+        if not flag :
+            return output(402, 'You have not enrolled to the course')
 
         session_id = len(chat_history.keys())
 
@@ -366,6 +354,16 @@ class ChatApi(Resource) :
     @validate_token()
     @roles_accepted('student')
     def get(self, course_id, session_id) :
+
+        # check for enrollment
+        flag = False
+        for course in current_user.courses :
+            if course.id == course_id :
+                flag = True
+                break
+        if not flag :
+            return output(402, 'You have not enrolled to the course')
+
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 
         if not chat :
@@ -381,6 +379,18 @@ class ChatApi(Resource) :
         data = chat_parser.parse_args()
         query = data['query']
         tag = data['tag'] # <- used later
+
+        # check for enrollment
+        flag = False
+        for course in current_user.courses :
+            if course.id == course_id :
+                flag = True
+                break
+        if not flag :
+            return output(402, 'You have not enrolled to the course')
+
+        if not (query or tag) :
+            return output(403, 'Missing input fields')
 
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 
@@ -403,6 +413,15 @@ class ChatApi(Resource) :
     @roles_accepted('student')
     def delete(self, course_id, session_id) :
 
+        # check for enrollment
+        flag = False
+        for course in current_user.courses :
+            if course.id == course_id :
+                flag = True
+                break
+        if not flag :
+            return output(402, 'You have not enrolled to the course')
+
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 
         if not chat :
@@ -419,6 +438,16 @@ class ChatApi(Resource) :
     @validate_token()
     @roles_required('student')
     def put(self, course_id, session_id) :
+        
+        # check for enrollment
+        flag = False
+        for course in current_user.courses :
+            if course.id == course_id :
+                flag = True
+                break
+        if not flag :
+            return output(402, 'You have not enrolled to the course')
+
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 
         if not chat :
