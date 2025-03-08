@@ -326,6 +326,9 @@ class ChatOutlineApi(Resource) :
         if not flag :
             return output(402, 'You have not enrolled to the course')
 
+        if not (query or tag) :
+            return output(403, 'Missing input fields')
+
         session_id = len(chat_history.keys())
 
         chat_history[session_id] = [
