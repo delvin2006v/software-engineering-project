@@ -17,6 +17,11 @@ user_datastore = security.datastore
 crntdir = str(Path(os.path.abspath(os.path.dirname(__file__))).parents[0])
 static_dir = crntdir + '/static'
 
+course_fields = {
+    'id': fields.Integer,
+    'name': fields.String
+}
+
 # Course Api
 class CourseApi(Resource) :
 
