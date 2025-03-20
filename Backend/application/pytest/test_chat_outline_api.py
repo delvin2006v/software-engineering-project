@@ -24,24 +24,8 @@ def invalid_token():
 
 # Test cases for ChatOutline API
 
-def test_fetch_chats_success(student_token):
-    """Test fetching chats successfully."""
-    headers = {"Authentication-Token": student_token}
-
-    response = requests.get(f"{BASE_URL}/chats/1", headers=headers)
-
-    assert response.status_code == 200, f"Failed to fetch chats: {response.text}"
-
-    data = response.json()
-
-    assert data["status"]["success"] in [1, True]
-    assert isinstance(data["data"], list), "Expected data to be a list of chats"
-    assert len(data["data"]) > 0, "No chats found"
-
-
-
-def test_fetch_chats_no_chats(student_token):
-    """Test fetching chats when no chats exist."""
+def test_fetch_chats_invalid_course_id(student_token):
+    """Test fetching chats when course doesn't exist."""
     headers = {"Authentication-Token": student_token}
     
     response = requests.get(f"{BASE_URL}/chats/999", headers=headers)  # Invalid course ID
@@ -51,6 +35,18 @@ def test_fetch_chats_no_chats(student_token):
     data = response.json()
     
     assert data["status"]["message"] == "You have not enrolled to the course"
+
+def test_fetch_chats_no_chats(student_token):
+    """Test fetching chats when no chats exist."""
+    headers = {"Authentication-Token": student_token}
+    
+    response = requests.get(f"{BASE_URL}/chats/1", headers=headers)
+    
+    assert response.status_code == 404, f"Unexpected status code: {response.text}"
+    
+    data = response.json()
+    
+    assert data["status"]["message"] == "No chats found"
 
 
 def test_fetch_chats_invalid_auth(invalid_token):
@@ -83,6 +79,20 @@ def test_create_chat_success(student_token):
     assert data["status"]["success"] in [1, True]
     assert data["status"]["message"] == "Chat Created successfully"
     assert "session_id" in data["data"]
+
+def test_fetch_chats_success(student_token):
+    """Test fetching chats successfully."""
+    headers = {"Authentication-Token": student_token}
+
+    response = requests.get(f"{BASE_URL}/chats/1", headers=headers)
+
+    assert response.status_code == 200, f"Failed to fetch chats: {response.text}"
+
+    data = response.json()
+
+    assert data["status"]["success"] in [1, True]
+    assert isinstance(data["data"], list), "Expected data to be a list of chats"
+    assert len(data["data"]) > 0, "No chats found"
 
 
 def test_create_chat_missing_fields(student_token):

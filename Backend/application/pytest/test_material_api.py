@@ -1,16 +1,13 @@
 import pytest
 import requests
+from helpers import login_and_get_token
 
 BASE_URL = "http://localhost:5000"  # Ensure your Flask app is running locally
 
-# Helper function to login and get auth token
-def login_and_get_token(username, password):
-    response = requests.post(f"{BASE_URL}/user_login", json={
-        "username": username,
-        "password": password
-    })
-    assert response.status_code == 200, f"Login failed for {username}: {response.text}"
-    return response.json()["data"]["token"]
+@pytest.fixture(scope="module")
+def student_token():
+    """Fixture to get an authentication token for a student."""
+    return login_and_get_token("dummy_student", "password")
 
 @pytest.fixture(scope="module")
 def instructor_token():
@@ -29,19 +26,29 @@ def invalid_token():
 
 # Test cases for Material API
 
-def test_fetch_materials_success(instructor_token):
+def test_fetch_materials_failure(instructor_token):
     """Test fetching materials successfully."""
     headers = {"Authentication-Token": instructor_token}
     
     response = requests.get(f"{BASE_URL}/courses/1/materials", headers=headers)
     
-    assert response.status_code == 200, f"Failed to fetch materials: {response.text}"
+    assert response.status_code == 404, f"No materials so must fail"
     
     data = response.json()
     
-    assert data["status"]["success"] in [1, True]
-    assert "materials" in data["data"]
+    assert data["status"]["success"] in [0, False]
 
+def test_fetch_materials_student_failure(student_token):
+    """Test fetching materials successfully."""
+    headers = {"Authentication-Token": student_token}
+    
+    response = requests.get(f"{BASE_URL}/courses/1/materials", headers=headers)
+    
+    assert response.status_code == 402, "Student should not have access to this course"
+    
+    data = response.json()
+    
+    assert data["status"]["message"] == "You are not allowed to access that resource"
 
 def test_fetch_materials_no_enrollment(ta_token):
     """Test fetching materials without enrollment."""
@@ -74,14 +81,25 @@ def test_upload_material_success(instructor_token):
     assert data["status"]["success"] in [1, True]
     assert data["status"]["message"] == "Material uploaded successfully"
 
-
+def test_fetch_materials_success(instructor_token):
+    """Test fetching materials successfully."""
+    headers = {"Authentication-Token": instructor_token}
+    
+    response = requests.get(f"{BASE_URL}/courses/1/materials", headers=headers)
+    
+    assert response.status_code == 200, f"Failed to fetch materials: {response.text}"
+    
+    data = response.json()
+    
+    assert data["status"]["success"] in [1, True]
+    assert "materials" in data["data"]
 
 def test_edit_material_success(instructor_token):
     """Test editing an existing material."""
     headers = {"Authentication-Token": instructor_token}
     
     files = {
-        "id": (None, 2),  # Existing material ID
+        "id": (None, 1),  # Existing material ID
         "file": ("updated_example.pdf", b"%PDF-1.4 Updated PDF content."),
         "title": (None, "Updated Example Material"),
         "type": (None, "pdf")
@@ -122,7 +140,7 @@ def test_delete_material_success(instructor_token):
     headers = {"Authentication-Token": instructor_token}
     
     # Delete a material with ID 1
-    response = requests.delete(f"{BASE_URL}/courses/1/materials/2", headers=headers)
+    response = requests.delete(f"{BASE_URL}/courses/1/materials/1", headers=headers)
     
     assert response.status_code == 200, f"Failed to delete material: {response.text}"
 

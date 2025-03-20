@@ -57,6 +57,13 @@ def init_data(user_datastore) :
             roles=['instructor']
         )
 
+    if not user_datastore.find_user(username='no-enrollment') :
+        user_datastore.create_user(
+            username='no-enrollment',
+            password=hash_password('password'),
+            roles=['student']
+        )
+
     # commit changes
     user_datastore.commit()
 

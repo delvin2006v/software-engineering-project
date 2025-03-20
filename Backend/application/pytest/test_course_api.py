@@ -1,16 +1,8 @@
 import pytest
 import requests
+from helpers import login_and_get_token
 
 BASE_URL = "http://localhost:5000"  # Ensure your Flask app is running locally
-
-# Helper function to login and get auth token
-def login_and_get_token(username, password):
-    response = requests.post(f"{BASE_URL}/user_login", json={
-        "username": username,
-        "password": password
-    })
-    assert response.status_code == 200, f"Login failed for {username}: {response.text}"
-    return response.json()["data"]["token"]
 
 @pytest.fixture(scope="module")
 def student_token():
@@ -33,13 +25,18 @@ def auth_token():
     return login_and_get_token("dummy_student", "password")
 
 @pytest.fixture(scope="module")
+def no_enrollment():
+    """Fixture to get an authentication token for a non-enrolled user."""
+    return login_and_get_token('no-enrollment', 'password')
+
+@pytest.fixture(scope="module")
 def unauthenticated_headers():
     """Headers without any authentication token."""
     return {}
 
 # Test cases
 
-def test_fetch_all_courses(auth_token):
+def test_fetch_all_courses_success(auth_token):
     """Test fetching all enrolled courses."""
     headers = {"Authentication-Token": auth_token}
     
@@ -64,6 +61,17 @@ def test_fetch_specific_course(auth_token):
     
     assert data["data"]["course"]["id"] == 1
 
+def test_no_course_enrollment(no_enrollment):
+    """Test fetching all enrolled courses."""
+    headers = {"Authentication-Token": no_enrollment}
+    
+    response = requests.get(f"{BASE_URL}/courses", headers=headers)
+    
+    assert response.status_code == 404, f"No enrollment must fail"
+    
+    data = response.json()
+    
+    assert data['status']['message'] == 'You have not enrolled to any course'
 
 def test_fetch_course_not_enrolled(auth_token):
     """Test fetching a course that the user is not enrolled in."""
@@ -134,6 +142,16 @@ def test_fetch_course_as_instructor(instructor_token):
 def test_unauthorized_access_to_course(unauthenticated_headers):
     """Test unauthorized access to a course without authentication."""
     response = requests.get(f"{BASE_URL}/courses/1", headers=unauthenticated_headers)
+    
+    assert response.status_code == 401, "Unauthorized request should fail"
+    
+    data = response.json()
+    
+    assert data["status"]["message"] in ["Authentication Failed", "Invalid Authentication-Token provided"]
+
+def test_fetch_all_courses_failure(unauthenticated_headers):
+    """Test unauthorized access to fetch all courses"""
+    response = requests.get(f"{BASE_URL}/courses", headers=unauthenticated_headers)
     
     assert response.status_code == 401, "Unauthorized request should fail"
     
