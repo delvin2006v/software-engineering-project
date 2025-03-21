@@ -5,20 +5,25 @@ const store = createStore({
     return {
       user: {
         username: null,
-        role: null
+        role: null,
+        token: null
       },
-      isAuthenticated: false
+      isAuthenticated: false,
+      token: null
+
     }
   },
   mutations: {
     SET_USER (state, payload) {
       state.user.username = payload.username
       state.user.role = payload.role
+      state.user.token = payload.token
       state.isAuthenticated = true
     },
     LOGOUT (state) {
       state.user.username = null
       state.user.role = null
+      state.user.token = null
       state.isAuthenticated = false
     }
   },

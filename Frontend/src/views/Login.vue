@@ -9,24 +9,50 @@ const username = ref('')
 const role = ref('')
 const errorMessage = ref('')
 
-const handleLogin = () => {
-  if (username.value && role.value) {
-    store.dispatch('login', {
-      username: username.value,
-      role: role.value
-    })
-    if(role.value =='TA'){
-      router.push('/dashboard')
-    } else if (role.value === 'Instructor') {
-      router.push('/instructor-dashboard/TA-course'); // Redirect TA to Tadashboard
-    } else{
+const handleLogin = async () => {
+  try {
+    // Make API request
+    const response = await axios.post('http://127.0.0.1:5000/user_login', {
+      username: 'dummy_student',
+      password: 'password'
+    });
 
-      router.push('/dashboard') // Redirect to dashboard
+    // Log API response
+    console.log(response.data);
+    console.log(response.status);
+
+    // Check if API response contains user data
+    if (response.data.data && response.data.data.username && response.data.data.role) {
+      // Store user data in Vuex
+      console.log("1")
+      const userData = {
+        username: response.data.data.username,
+        role: response.data.data.role,
+        token: response.data.data.token // Assuming API returns a token
+      };
+
+      store.dispatch('login', userData);
+      console.log("2")
+
+
+      // Redirect user based on role
+      if (response.data.role === 'TA') {
+        router.push('/dashboard');
+      } else if (response.data.role === 'Instructor') {
+        router.push('/instructor-dashboard/TA-course');
+      } else {
+        router.push('/dashboard');
+      }
+    } else {
+      errorMessage.value = 'Invalid response from server';
     }
-  } else {
-    errorMessage.value = 'Please enter both Username and Role!'
+  } catch (error) {
+    console.error('Login error:', error);
+    errorMessage.value = 'Login failed. Please check your credentials!';
   }
-}
+};
+
+
 
 </script>
 

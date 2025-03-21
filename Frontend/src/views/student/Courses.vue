@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import { useStore } from 'vuex'
 
 // Importing UI components
 import {
@@ -14,6 +15,10 @@ const courses = ref([
   { id: 2, title: "Web Development Bootcamp", description: "Master frontend and backend web development." },
   { id: 3, title: "Data Science Essentials", description: "Understand data processing and visualization." },
 ]);
+
+const store = useStore();
+
+console.log(store.state.user)
 
 </script>
 

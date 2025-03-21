@@ -10,3 +10,8 @@ class LocalConfig :
     SECURITY_TOKEN_AUTHENTICATION_HEADER = 'Authentication-Token'
     SECURITY_LOGIN_WITHOUT_CONFIRMATION = True
     SECURITY_REDIRECT_BEHAVIOR = 'spa'
+
+class TestConfig(LocalConfig) :
+    
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///../instance/testdb.db'
+
