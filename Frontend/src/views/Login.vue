@@ -13,7 +13,7 @@ const handleLogin = async () => {
   try {
     // Make API request
     const response = await axios.post('http://127.0.0.1:5000/user_login', {
-      username: 'dummy_student',
+      username: 'dummy_instructor',
       password: 'password'
     });
 
@@ -32,13 +32,13 @@ const handleLogin = async () => {
       };
 
       store.dispatch('login', userData);
-      console.log("2")
+      console.log(response.data.data.role)
 
 
       // Redirect user based on role
-      if (response.data.role === 'TA') {
+      if (response.data.data.role == 'ta') {
         router.push('/dashboard');
-      } else if (response.data.role === 'Instructor') {
+      } else if (response.data.data.role == 'instructor') {
         router.push('/instructor-dashboard/TA-course');
       } else {
         router.push('/dashboard');

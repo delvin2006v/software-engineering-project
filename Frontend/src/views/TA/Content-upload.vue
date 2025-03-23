@@ -1,13 +1,16 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Trash2, Upload, FileText, Clock, Search } from 'lucide-vue-next'
-
+import axios from 'axios'
+import {useStore} from 'vuex'
 const title = ref('')
 const materialType = ref('pdf')
 const selectedFile = ref(null)
 const uploads = ref([])
 const searchQuery = ref('')
-
+const courseId = ref(1)
+const store = useStore()
+const successfullyUploaded = ref(false)
 const handleFileChange = (event) => {
   selectedFile.value = event.target.files[0]
 }
@@ -23,9 +26,33 @@ const handleSubmit = () => {
     date: new Date().toLocaleDateString(),
     size: (selectedFile.value.size / 1024).toFixed(2) + ' KB'
   }
+  // Create FormData object
+  const formData = new FormData();
+  formData.append('title', title.value);
+  formData.append('type', materialType.value);
+  formData.append('file', selectedFile.value);
+  formData.append('date', new Date().toLocaleDateString());
+  formData.append('size', (selectedFile.value.size / 1024).toFixed(2) + ' KB');
 
   uploads.value.unshift(newUpload)
-  
+  console.log(store.state.user)
+  axios.post('http://127.0.0.1:5000/courses/1/materials',formData,{
+    headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authentication-Token': store.state.user.token,
+      },
+  }).then(function (response) {
+    console.log(response);
+    successfullyUploaded.value = true
+    setTimeout(() => { 
+     successfullyUploaded.value = false
+    }, 3000);
+
+  })
+  .catch(function (error) {
+    console.log(error);
+  });
+
   // Reset form
   title.value = ''
   materialType.value = 'pdf'
@@ -68,7 +95,7 @@ const stats = {
     <div class="container mx-auto">
       <h1 class="text-3xl font-bold mb-8 text-center">File Upload System</h1>
       
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-center">
         <!-- Upload Form -->
         <div class="bg-card p-6 rounded-lg shadow-lg animate-slide-up hover:shadow-xl transition-all duration-300 border border-gray-600">
           <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -117,7 +144,8 @@ const stats = {
               <Upload class="w-4 h-4" />
               Upload Material
             </button>
-          </form>
+          </form><br>
+          <span v-if="successfullyUploaded" class="m-2 font-bold text-center bg-white p-5 text-black" >Successfully uploaded</span>
         </div>
         
         <!-- Upload List -->
