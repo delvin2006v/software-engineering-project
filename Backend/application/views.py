@@ -12,7 +12,7 @@ user_datastore = security.datastore
 @auth_required('token')
 @validate_token()
 def ping() :
-    return output(200,'Server is up !')
+    return output(200,'Server is up !', )
 
 # Login route
 @app.route('/user_login', methods=['POST'])

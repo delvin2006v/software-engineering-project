@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 from sqlalchemy import desc
+from .sample_agent import chatbot, fetch_history
 
 user_datastore = security.datastore
 
@@ -287,6 +288,8 @@ chat_parser = reqparse.RequestParser()
 chat_parser.add_argument('query')
 chat_parser.add_argument('tag')
 chat_parser.add_argument('chat_id')
+chat_parser.add_argument('resources')
+chat_parser.add_argument('code')
 
 # ChatOutline Api
 class ChatOutlineApi(Resource) :
@@ -320,13 +323,17 @@ class ChatOutlineApi(Resource) :
     def post(self, course_id) :
         data = chat_parser.parse_args()
         query = data['query']
-        tag = data['tag'] # <- used later
+        tag = data['tag']
+        resources = data['resources']
+        code = data['code']
 
         # check for enrollment
         flag = False
+        c = None
         for course in current_user.courses :
             if course.id == course_id :
                 flag = True
+                c = json.loads(course.content)
                 break
         if not flag :
             return output(402, 'You have not enrolled to the course')
@@ -334,26 +341,51 @@ class ChatOutlineApi(Resource) :
         if not query or not tag :
             return output(403, 'Missing input fields')
 
-        session_id = len(chat_history.keys())
+        # parsing tag
+        pars = [int(x) for x in tag.split('-')]
+        if len(pars) > 3 :
+            course_id, section_id, content_id, question_id = pars
+        else :
+            course_id, section_id, content_id = pars
 
-        chat_history[session_id] = [
-            {
-                'role': 'user',
-                'message': query
-            },
-            {
-                'role': 'agent',
-                'message': 'this is a dummy message'
-            }
-        ]
+        flag = False
+        context=None
+        for section in c :
+            print(section['id'])
+            if section['id'] == section_id :
+                for item in section['items'] :
+                    if item['id'] == content_id :
+                        context = item['type']
+                        flag = True
+                        break
+            if flag :
+                break
+        if not flag :
+            return output(403, 'Invalid Tag')
+
+        if context in ['lecture', 'practice-assignment', 'graded-assignment'] :
+            response = chatbot(
+                context,
+                tag,
+                query,
+                resources=resources
+            )
+        elif context == 'programming-assignment' :
+            response = chatbot(
+                context,
+                tag,
+                query,
+                code= code,
+                resources=resources
+            )
 
         time_stamp = datetime.now()
-        chat = Chat(user_id=current_user.id, course_id=course_id, time=time_stamp, session_id=session_id)
+        chat = Chat(user_id=current_user.id, course_id=course_id, time=time_stamp, session_id=response['session_id'])
 
         db.session.add(chat)
         db.session.commit()
 
-        return output(200, 'Chat Created successfully', {'message': chat_history[session_id][-1], 'session_id': session_id})
+        return output(200, 'Chat Created successfully', {'message': response['message'], 'session_id': response['session_id']})
 
 # ChatApi
 class ChatApi(Resource) :
@@ -377,7 +409,7 @@ class ChatApi(Resource) :
         if not chat :
             return output(404, 'Chat history not found')
 
-        return output(200, 'Chat history fetched successfully', {"chat": chat_history[session_id]})
+        return output(200, 'Chat history fetched successfully', {"chat": fetch_history(session_id)})
 
 
     @auth_required('token')
@@ -386,13 +418,17 @@ class ChatApi(Resource) :
     def post(self, course_id, session_id) :
         data = chat_parser.parse_args()
         query = data['query']
-        tag = data['tag'] # <- used later
+        tag = data['tag']
+        resources = data['resources']
+        code = data['code']
 
         # check for enrollment
         flag = False
+        c = None
         for course in current_user.courses :
             if course.id == course_id :
                 flag = True
+                c = json.loads(course.content)
                 break
         if not flag :
             return output(402, 'You have not enrolled to the course')
@@ -400,21 +436,51 @@ class ChatApi(Resource) :
         if not query or not tag :
             return output(403, 'Missing input fields')
 
+        # parsing tag
+        pars = [int(x) for x in tag.split('-')]
+        if len(pars) > 3 :
+            course_id, section_id, content_id, question_id = pars
+        else :
+            course_id, section_id, content_id = pars
+
+        flag = False
+        context=None
+        for section in c :
+            if section['id'] == section_id :
+                for item in section['items'] :
+                    if item['id'] == content_id :
+                        context = item['type']
+                        flag = True
+                        break
+            if flag :
+                break
+        if not flag :
+            return output(403, 'Invalid Tag')
+
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 
         if not chat :
             return output(404, 'Chat history not found')
 
-        chat_history[session_id].append({
-                'role': 'user',
-                'message': query
-            })
-        chat_history[session_id].append({
-                'role': 'agent',
-                'message': 'this is a dummy message'
-            })
+        if context in ['lecture', 'practice-assignment', 'graded-assignment'] :
+            response = chatbot(
+                context,
+                tag,
+                query,
+                resources=resources,
+                session_id=session_id
+            )
+        elif context == 'programming-assignment' :
+            response = chatbot(
+                context,
+                tag,
+                query,
+                code= code,
+                resources=resources,
+                session_id=session_id
+            )
 
-        return output(200, 'Message added successfully', {'message': chat_history[session_id][-1], 'session_id': session_id})
+        return output(200, 'Message added successfully', {'message': response['message'], 'session_id': session_id})
 
     @auth_required('token')
     @validate_token()
@@ -438,8 +504,6 @@ class ChatApi(Resource) :
         db.session.delete(chat)
         db.session.commit()
 
-        del chat_history[session_id]
-
         return output(200, 'Chat history deleted successfully')
 
     @auth_required('token')
@@ -460,10 +524,6 @@ class ChatApi(Resource) :
 
         if not chat :
             return output(404, 'Chat history not found')
-
-        path = export_chat(chat_history, session_id)
+        path = export_chat(fetch_history(session_id), session_id)
 
         return output(200, 'Chat exported successfully', {'path': path})
-
-
-
