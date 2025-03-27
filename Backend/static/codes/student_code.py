@@ -1,5 +1,1 @@
-print(1)
-print(2)
-print(3)
-print(4)
-print(5)
+{'id': 1, 'option': ['1\n2\n3\n4\n5']}

@@ -170,7 +170,7 @@ class MaterialApi(Resource) :
     @validate_token()
     @roles_accepted('ta', 'instructor')
     def post(self, course_id) :
-        print(1111)
+
 
         # check for enrollment
         flag = False

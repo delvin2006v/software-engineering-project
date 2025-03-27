@@ -37,7 +37,7 @@ const routes = [
         component: () => import('@/views/TA/Tacourses.vue'),
       },
       {
-        path: 'TA-upload',
+        path: 'TA-upload/:id',
         component: () => import('@/views/TA/Content-upload.vue'),
       },
     ],
@@ -51,7 +51,7 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/coursecontent',
+    path: '/coursecontent/:id',  // Add :id as a dynamic parameter
     name: 'Content',
     component: () => import('@/views/student/CourseContent.vue'),
     meta: { requiresAuth: true }

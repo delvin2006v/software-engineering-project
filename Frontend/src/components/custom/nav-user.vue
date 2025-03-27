@@ -46,10 +46,32 @@ defineProps({
 })
 
 // Logout function
-const handleLogout = () => {
-  store.dispatch("logout") // Vuex logout action
-  router.push("/") // Redirect to login page
-}
+const handleLogout = async () => {
+  try {
+    const token = store.state.user?.token; 
+    if (!token) {
+      console.error("No token found!");
+      return;
+    }
+
+    // Send logout request with token in headers
+    await axios.post("http://127.0.0.1:5000/user_logout",{},
+      {
+        headers: {
+          "Authentication-Token": token,
+        },
+      }
+    );
+
+    // Dispatch Vuex logout action
+    store.dispatch("logout");
+
+    // Redirect to login page
+    router.push("/");
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+};
 </script>
 
 <template>
@@ -76,7 +98,7 @@ const handleLogout = () => {
           class="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
           :side="isMobile ? 'bottom' : 'right'"
           align="end"
-          sideOffset="4"
+          :sideOffset="4"
         >
           <DropdownMenuLabel class="p-0 font-normal">
             <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">

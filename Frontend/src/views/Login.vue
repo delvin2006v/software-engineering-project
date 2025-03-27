@@ -6,6 +6,7 @@ import { useStore } from 'vuex'
 const store = useStore()
 const router = useRouter()
 const username = ref('')
+const password = ref('')
 const role = ref('')
 const errorMessage = ref('')
 
@@ -13,32 +14,29 @@ const handleLogin = async () => {
   try {
     // Make API request
     const response = await axios.post('http://127.0.0.1:5000/user_login', {
-      username: 'dummy_instructor',
-      password: 'password'
-    });
 
-    // Log API response
-    console.log(response.data);
-    console.log(response.status);
+      username: username.value,
+      password: password.value
+    });
 
     // Check if API response contains user data
     if (response.data.data && response.data.data.username && response.data.data.role) {
-      // Store user data in Vuex
-      console.log("1")
       const userData = {
+        user_id: response.data.data.id,
+
         username: response.data.data.username,
         role: response.data.data.role,
         token: response.data.data.token // Assuming API returns a token
       };
 
       store.dispatch('login', userData);
-      console.log(response.data.data.role)
 
-
+      console.log(response.data.data)
       // Redirect user based on role
-      if (response.data.data.role == 'ta') {
-        router.push('/dashboard');
-      } else if (response.data.data.role == 'instructor') {
+      if (response.data.data.role === 'ta') {
+        router.push('/ta-dashboard');
+      } else if (response.data.data.role === 'instructor') {
+
         router.push('/instructor-dashboard/TA-course');
       } else {
         router.push('/dashboard');
@@ -80,6 +78,16 @@ const handleLogin = async () => {
                 type="text" 
                 id="username"
                 placeholder="Enter your username"
+                class="block w-full rounded-md border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:ring-2 focus:ring-indigo-600 focus:outline-none sm:text-sm transition-all duration-300"
+              />
+            </div>
+            <label for="password" class="block text-sm font-medium text-gray-900 mt-5">Password</label>
+              <div class="mt-2">
+              <input 
+                v-model="password" 
+                type="text" 
+                id="password"
+                placeholder="Enter your password"
                 class="block w-full rounded-md border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:ring-2 focus:ring-indigo-600 focus:outline-none sm:text-sm transition-all duration-300"
               />
             </div>

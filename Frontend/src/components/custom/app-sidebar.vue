@@ -106,7 +106,7 @@ let navForStudents = [
   ]
   let navMain = store.state.user.role === "Instructor" 
   ? navForInstructor 
-  : store.state.user.role === "TA" 
+  : store.state.user.role === "ta" 
     ? navForTA 
     : navForStudents;
 

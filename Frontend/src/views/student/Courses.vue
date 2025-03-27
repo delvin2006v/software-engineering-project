@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from "vue";
-import { useStore } from 'vuex'
+
+import { ref, onMounted } from "vue";
+import { useStore } from 'vuex';
+
 
 // Importing UI components
 import {
@@ -9,16 +11,38 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-
-const courses = ref([
-  { id: 1, title: "Introduction to AI", description: "Learn the basics of Artificial Intelligence." },
-  { id: 2, title: "Web Development Bootcamp", description: "Master frontend and backend web development." },
-  { id: 3, title: "Data Science Essentials", description: "Understand data processing and visualization." },
-]);
+import { Button } from "@/components/ui/button";
 
 const store = useStore();
+console.log(store.state.user.token)
+const courses = ref([]);
 
-console.log(store.state.user)
+
+const fetchCourses = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:5000/courses', {
+      headers: {
+        'Authentication-Token': store.state.user.token,
+      },
+    });
+
+    if (response.data.status.success) {
+      courses.value = response.data.data.courses.map(course => ({
+        id: course.id,
+        title: course.name,
+        description: "No description available", // Prevents error if no description exists
+      }));
+    } else {
+      console.error('Failed to fetch courses:', response.data.status.message);
+    }
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+  }
+};
+
+onMounted(() => {
+  fetchCourses();
+});
 
 </script>
 
@@ -35,7 +59,7 @@ console.log(store.state.user)
       <router-link
         v-for="(course, index) in courses"
         :key="index"
-        :to="'/coursecontent'"
+        :to="'/coursecontent/' + course.id"
         class="block transition-transform transform hover:scale-105 hover:shadow-2xl duration-300"
       >
         <Card class="overflow-hidden shadow-lg rounded-lg">
@@ -59,17 +83,10 @@ console.log(store.state.user)
   </div>
 </template>
 
-
 <style scoped>
-/* Add any custom styles if needed */
-.main{
+.main {
   margin-top: 7vh;
   margin-bottom: 32vh;
   margin-left: 30px;
 }
 </style>
-
-
-
-
-<!-- :to="'/courses/details/' + course.id" -->

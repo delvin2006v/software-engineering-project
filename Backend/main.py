@@ -16,6 +16,7 @@ def create_app(for_test=False) :
     else :
         app.config.from_object(LocalConfig)
     CORS(app,resources={r"/*": {"origins": "*"}})
+
     api = Api(app)
     db.init_app(app)
 

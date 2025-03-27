@@ -1,42 +1,78 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed,onBeforeMount } from 'vue'
 import { Trash2, Upload, FileText, Clock, Search } from 'lucide-vue-next'
 import axios from 'axios'
 import {useStore} from 'vuex'
+import { useRoute } from 'vue-router'
+
 const title = ref('')
 const materialType = ref('pdf')
 const selectedFile = ref(null)
 const uploads = ref([])
 const searchQuery = ref('')
-const courseId = ref(1)
 const store = useStore()
+const route = useRoute()
 const successfullyUploaded = ref(false)
+const courseId =route.params.id 
 const handleFileChange = (event) => {
   selectedFile.value = event.target.files[0]
+}
+
+//Get Previous Material
+async function previousCourses(){
+
+  const response = await axios.get(`http://127.0.0.1:5000/courses/${courseId}/materials`,{
+      headers: {
+          'Authentication-Token': store.state.user.token,
+        }}
+        )
+      for (const material of response.data.data.materials) {
+        let newupload = {
+            id:material.id ,
+            title: material.title,
+            type: material.type,
+            fileName: material.path,
+          }
+        uploads.value.unshift(newupload)
+        
+      }
+         
+      
+}
+// Delete upload
+async function deleteOneUpload(materialId){
+try{
+  const response = await axios.delete(`http://127.0.0.1:5000/courses/${courseId}/materials/${materialId}`,{
+      headers: {
+          'Authentication-Token': store.state.user.token,
+        }}
+        )
+      
+}catch(error){
+ console.log(error.message)
+} 
+      
 }
 
 const handleSubmit = () => {
   if (!title.value || !selectedFile.value) return
 
-  const newUpload = {
+   const newupload= {
     id: Date.now(),
     title: title.value,
     type: materialType.value,
     fileName: selectedFile.value.name,
-    date: new Date().toLocaleDateString(),
-    size: (selectedFile.value.size / 1024).toFixed(2) + ' KB'
+    
   }
+
   // Create FormData object
   const formData = new FormData();
   formData.append('title', title.value);
   formData.append('type', materialType.value);
   formData.append('file', selectedFile.value);
-  formData.append('date', new Date().toLocaleDateString());
-  formData.append('size', (selectedFile.value.size / 1024).toFixed(2) + ' KB');
 
-  uploads.value.unshift(newUpload)
-  console.log(store.state.user)
-  axios.post('http://127.0.0.1:5000/courses/1/materials',formData,{
+  uploads.value.unshift(newupload)
+  axios.post(`http://127.0.0.1:5000/courses/${courseId}/materials`,formData,{
     headers: {
         'Content-Type': 'multipart/form-data',
         'Authentication-Token': store.state.user.token,
@@ -62,6 +98,8 @@ const handleSubmit = () => {
   document.getElementById('file-upload').value = ''
 }
 
+
+
 const deleteUpload = (id) => {
   const index = uploads.value.findIndex(upload => upload.id === id)
   if (index !== -1) {
@@ -71,6 +109,7 @@ const deleteUpload = (id) => {
       uploads.value = uploads.value.filter(upload => upload.id !== id)
     }, 300)
   }
+  deleteOneUpload(id)
 }
 
 const filteredUploads = computed(() => {
@@ -88,6 +127,8 @@ const stats = {
   textCount: computed(() => uploads.value.filter(u => u.type === 'text').length),
   otherCount: computed(() => uploads.value.filter(u => u.type === 'other').length)
 }
+
+onBeforeMount(previousCourses)
 </script>
 
 <template>

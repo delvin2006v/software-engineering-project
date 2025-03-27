@@ -1,5 +1,7 @@
 <script setup>
-import { ref } from "vue";
+import { ref ,onBeforeMount} from "vue";
+import axios from 'axios'
+import {useStore} from 'vuex'
 
 // Importing UI components
 import {
@@ -8,11 +10,19 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
+const store = useStore()
+const userCourses = ref([]);
 
-const courses = ref([
-  { id: 1, title: "Introduction to AI", description: "Learn the basics of Artificial Intelligence." },
-  { id: 2, title: "Web Development Bootcamp", description: "Master frontend and backend web development." },
-]);
+async function AllCourses(){
+const response = await axios.get('http://127.0.0.1:5000/courses',{
+    headers: {
+        'Authentication-Token': store.state.user.token,
+      },
+  })
+  userCourses.value = response.data.data.courses
+
+}
+onBeforeMount(AllCourses)
 
 </script>
 
@@ -26,9 +36,9 @@ const courses = ref([
     <!-- Course Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 w-fit">
       <router-link
-        v-for="(course, index) in courses"
+        v-for="(course, index) in userCourses"
         :key="index"
-        :to="'/ta-dashboard/TA-upload'"
+        :to="'/ta-dashboard/TA-upload/'+course.id"
         class="block transition-transform transform hover:scale-105 hover:shadow-2xl duration-300"
       >
         <Card class="overflow-hidden shadow-lg rounded-lg">
@@ -38,8 +48,8 @@ const courses = ref([
             class="w-full h-48 object-cover"
           />
           <CardHeader>
-            <CardTitle class="text-lg font-semibold">{{ course.title }}</CardTitle>
-            <p class="text-sm text-gray-600">{{ course.description }}</p>
+            <CardTitle class="text-lg font-semibold">{{ course.name }}</CardTitle>
+            <!-- <p class="text-sm text-gray-600">{{ course.description }}</p> -->
           </CardHeader>
           <CardFooter>
             <Button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded">

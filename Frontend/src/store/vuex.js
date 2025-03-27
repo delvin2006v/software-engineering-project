@@ -1,43 +1,59 @@
-import { createStore } from 'vuex'
+import { createStore } from "vuex";
 
 const store = createStore({
-  state () {
+  state() {
     return {
-      user: {
+      user: JSON.parse(localStorage.getItem("user")) || {
+        user_id: null,
         username: null,
         role: null,
-        token: null
-      },
-      isAuthenticated: false,
-      token: null
 
-    }
+        token: null,
+      },
+      isAuthenticated: localStorage.getItem("isAuthenticated") === "true",
+    };
   },
   mutations: {
-    SET_USER (state, payload) {
-      state.user.username = payload.username
-      state.user.role = payload.role
-      state.user.token = payload.token
-      state.isAuthenticated = true
+    SET_USER(state, payload) {
+      state.user = {
+        user_id: payload.user_id,
+        username: payload.username,
+        role: payload.role,
+        token: payload.token,
+      };
+      state.isAuthenticated = true;
+
+      // Store data in localStorage
+      localStorage.setItem("user", JSON.stringify(state.user));
+      localStorage.setItem("isAuthenticated", "true");
     },
-    LOGOUT (state) {
-      state.user.username = null
-      state.user.role = null
-      state.user.token = null
-      state.isAuthenticated = false
-    }
+    LOGOUT(state) {
+      state.user = {
+        user_id: null,
+        username: null,
+        role: null,
+        token: null,
+      };
+      state.isAuthenticated = false;
+
+      // Remove data from localStorage
+      localStorage.removeItem("user");
+      localStorage.removeItem("isAuthenticated");
+    },
+
   },
   actions: {
-    login ({ commit }, userData) {
-      commit('SET_USER', userData)
+    login({ commit }, userData) {
+      commit("SET_USER", userData);
     },
-    logout ({ commit }) {
-      commit('LOGOUT')
-    }
-  }
-})
+    logout({ commit }) {
+      commit("LOGOUT");
+    },
+  },
+});
 
-export default store
+export default store;
+
 
 
 
