@@ -83,22 +83,8 @@ const handleLogin = async () => {
             </div>
             <label for="password" class="block text-sm font-medium text-gray-900 mt-5">Password</label>
               <div class="mt-2">
-<<<<<<< Updated upstream
-=======
-              <input 
-                v-model="password" 
-                type="text" 
-                id="password"
-                placeholder="Enter your password"
-                class="block w-full rounded-md border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:ring-2 focus:ring-indigo-600 focus:outline-none sm:text-sm transition-all duration-300"
-              />
-            </div>
-          </div>
 
-          <div>
-            <!-- <div class="mt-2">
-            <label for="role" class="block text-sm font-medium text-gray-900">Role</label>
->>>>>>> Stashed changes
+
               <input 
                 v-model="password" 
                 type="text" 
@@ -110,7 +96,7 @@ const handleLogin = async () => {
           </div>
 
         
-          <!-- Error Message -->
+          <!---Error Message -->
           <p v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</p>
 
           <div>
