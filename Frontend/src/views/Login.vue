@@ -83,6 +83,8 @@ const handleLogin = async () => {
             </div>
             <label for="password" class="block text-sm font-medium text-gray-900 mt-5">Password</label>
               <div class="mt-2">
+<<<<<<< Updated upstream
+=======
               <input 
                 v-model="password" 
                 type="text" 
@@ -96,23 +98,18 @@ const handleLogin = async () => {
           <div>
             <!-- <div class="mt-2">
             <label for="role" class="block text-sm font-medium text-gray-900">Role</label>
+>>>>>>> Stashed changes
               <input 
-                v-model="role" 
+                v-model="password" 
                 type="text" 
-                id="role"
-                placeholder="Enter your role"
+                id="password"
+                placeholder="Enter your password"
                 class="block w-full rounded-md border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:ring-2 focus:ring-indigo-600 focus:outline-none sm:text-sm transition-all duration-300"
               />
-            This componenet has been changed by Kishar / time 5:29 date 18-02-25
-            </div>  -->
-            <label for="countries" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Role</label>
-            <select v-model="role"  id="countries" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-              <option selected>Choose a role</option>
-              <option value="Student">Student</option>
-              <option value="TA">TA</option>
-              <option value="Instructor">Instructor</option>
-            </select>
+            </div>
           </div>
+
+        
           <!-- Error Message -->
           <p v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</p>
 
