@@ -12,6 +12,7 @@ from pathlib import Path
 from datetime import datetime
 from sqlalchemy import desc
 from .sample_agent import chatbot, fetch_history
+from .sample_admin import upload_file, delete_file, update_file
 
 user_datastore = security.datastore
 
@@ -205,6 +206,8 @@ class MaterialApi(Resource) :
         db.session.add(material)
         db.session.commit()
 
+        upload_file(os.path.join(static_dir + '/uploads/', filename), course_id, title)
+
         return output(200, 'Material uploaded successfully')
 
     @auth_required('token')
@@ -234,6 +237,7 @@ class MaterialApi(Resource) :
         if not material :
             return output(404, 'Material not found')
 
+        old_title = material.title
         material.title = title
         material.type = file_type
 
@@ -246,6 +250,8 @@ class MaterialApi(Resource) :
             material.vector_id = 20 # <- to be modified
             
         db.session.commit()
+
+        update_file(crntdir + material.path, course_id, old_title, title)
         
         return output(200, 'Material edited successfully')
 
@@ -272,6 +278,8 @@ class MaterialApi(Resource) :
 
         db.session.delete(material)    
         db.session.commit()
+        
+        delete(course_id, material.title)
         
         return output(200, 'Material deleted successfully')
 
@@ -343,25 +351,25 @@ class ChatOutlineApi(Resource) :
 
         # parsing tag
         pars = [int(x) for x in tag.split('-')]
-        if len(pars) > 3 :
-            course_id, section_id, content_id, question_id = pars
-        else :
-            course_id, section_id, content_id = pars
+        if not len(pars) == 1:
+            if len(pars) > 3 :
+                course_id, section_id, content_id, question_id = pars
+            elif :
+                course_id, section_id, content_id = pars
 
-        flag = False
-        context=None
-        for section in c :
-            print(section['id'])
-            if section['id'] == section_id :
-                for item in section['items'] :
-                    if item['id'] == content_id :
-                        context = item['type']
-                        flag = True
-                        break
-            if flag :
-                break
-        if not flag :
-            return output(403, 'Invalid Tag')
+            flag = False
+            context=None
+            for section in c :
+                if section['id'] == section_id :
+                    for item in section['items'] :
+                        if item['id'] == content_id :
+                            context = item['type']
+                            flag = True
+                            break
+                if flag :
+                    break
+            if not flag :
+                return output(403, 'Invalid Tag')
 
         if context in ['lecture', 'practice-assignment', 'graded-assignment'] :
             response = chatbot(
@@ -376,6 +384,13 @@ class ChatOutlineApi(Resource) :
                 tag,
                 query,
                 code= code,
+                resources=resources
+            )
+        else :
+            response = chatbot(
+                'course',
+                tag,
+                query
                 resources=resources
             )
 
@@ -438,24 +453,26 @@ class ChatApi(Resource) :
 
         # parsing tag
         pars = [int(x) for x in tag.split('-')]
-        if len(pars) > 3 :
-            course_id, section_id, content_id, question_id = pars
-        else :
-            course_id, section_id, content_id = pars
+        if not len(pars) == 1:
+            if len(pars) > 3 :
+                course_id, section_id, content_id, question_id = pars
+            elif :
+                course_id, section_id, content_id = pars
 
-        flag = False
-        context=None
-        for section in c :
-            if section['id'] == section_id :
-                for item in section['items'] :
-                    if item['id'] == content_id :
-                        context = item['type']
-                        flag = True
-                        break
-            if flag :
-                break
-        if not flag :
-            return output(403, 'Invalid Tag')
+            flag = False
+            context=None
+            for section in c :
+                if section['id'] == section_id :
+                    for item in section['items'] :
+                        if item['id'] == content_id :
+                            context = item['type']
+                            flag = True
+                            break
+                if flag :
+                    break
+            if not flag :
+                return output(403, 'Invalid Tag')
+
 
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 
@@ -476,6 +493,14 @@ class ChatApi(Resource) :
                 tag,
                 query,
                 code= code,
+                resources=resources,
+                session_id=session_id
+            )
+        else: 
+            response = chatbot(
+                'course',
+                tag,
+                query,
                 resources=resources,
                 session_id=session_id
             )

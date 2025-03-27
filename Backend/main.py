@@ -53,7 +53,7 @@ api.add_resource(CourseApi, '/courses/<int:id>', '/courses')
 api.add_resource(SubmissionApi, '/submissions/<string:id>', '/submissions')
 api.add_resource(MaterialApi, '/courses/<int:course_id>/materials', '/courses/<int:course_id>/materials/<int:material_id>')
 api.add_resource(ChatOutlineApi, '/chats/<int:course_id>')
-api.add_resource(ChatApi, '/chats/<int:course_id>/<int:session_id>')
+api.add_resource(ChatApi, '/chats/<int:course_id>/<string:session_id>')
 
 # start dev server
 if __name__ == '__main__' :

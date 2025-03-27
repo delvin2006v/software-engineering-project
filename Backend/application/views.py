@@ -4,15 +4,14 @@ from .extensions import security, db
 from .utils import output, validate_token
 from flask_security import hash_password, auth_required, current_user, verify_password
 from .models import Token
+from .sample_agent import retrieve_document
 
 user_datastore = security.datastore
 
 # ping
 @app.route('/', methods=['GET'])
-@auth_required('token')
-@validate_token()
 def ping() :
-    return output(200,'Server is up !', )
+    return output(200,'Server is up !', retrieve_document(1,'python print'))
 
 # Login route
 @app.route('/user_login', methods=['POST'])

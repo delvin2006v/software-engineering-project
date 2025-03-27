@@ -13,6 +13,8 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from youtube_transcript_api import YouTubeTranscriptApi
 from pydantic import BaseModel, Field
 from langchain_core.runnables import RunnableWithMessageHistory, RunnableLambda
+from .sample_admin import embedder, client
+import uuid
 
 ytt_api = YouTubeTranscriptApi()
 
@@ -54,7 +56,7 @@ class CustomLLM(LLM):
             raise Exception(f"HuggingFace API error: {result['error']}")
         
         generated_text = result[0].get("generated_text", "")
-        return generated_text.split('<-->')[-1]
+        return generated_text #.split('<-->')[-1]
 
     @property
     def _llm_type(self) -> str:
@@ -72,6 +74,11 @@ def format_history(history: List[BaseMessage]) -> str:
 def format_transcript(transcript) -> str:
     return "\n".join([f"{msg.text}" for msg in transcript])
 
+def format_document(docs) :
+    if not docs:
+        return None        
+    return '\n'.join(doc['entity']['material_content'] for doc in docs)
+
 # to retrieve from sql db
 def retrieve_sql_data(course_id, section_id, content_id, question_id=None) :
     course_content = json.loads(Course.query.filter_by(id=course_id).first().content)
@@ -87,6 +94,23 @@ def retrieve_sql_data(course_id, section_id, content_id, question_id=None) :
                             if question['id'] == question_id :
                                 return question
     return None
+
+def retrieve_document(course_id, query) :
+    result = client.search(
+        collection_name='course_docs',
+        data=[embedder(query)],
+        filter=f'course_id like \'{course_id}\'',
+        limit=3,
+        output_fields=['material_name', 'material_content'],
+        search_params={
+                'metric_type': "COSINE"
+        },
+        anns_field='embedding'
+    )
+    if len(result) > 0 :
+        return result[0]
+    else :
+        return None
 
 def format_items(items) :
     return '\n'.join(str(i) + '. ' + items[i] for i in range(len(items)))
@@ -104,6 +128,7 @@ def prepare_lecture_input(input_dict) :
     
     # retrieve lecture data
     lecture_data = retrieve_sql_data(course_id, section_id, content_id)
+    document = retrieve_document(course_id, input_dict['user_query'])
 
     lecture_data['transcript'] = format_transcript(ytt_api.fetch(lecture_data['url'].split('/')[-1]))
 
@@ -112,7 +137,7 @@ def prepare_lecture_input(input_dict) :
         'history': format_history(input_dict['history']),
         'user_query': input_dict['user_query'],
         'resources': None, # TBA
-        'document': None # TBA
+        'document': format_document(document)
     }
 
 def prepare_assignment_input(input_dict) :
@@ -123,12 +148,15 @@ def prepare_assignment_input(input_dict) :
     # retrieve lecture data
     assignment_data = retrieve_sql_data(course_id, section_id, content_id, question_id)
 
+    # retrieve document
+    document = retrieve_document(course_id, input_dict['user_query'])
+
     return {
         'assignment_data': assignment_data,
         'history': format_history(input_dict['history']),
         'user_query': input_dict['user_query'],
         'resources': None, # TBA
-        'document': None # TBA
+        'document': format_document(document)
     }
 
 def prepare_programming_assignment_input(input_dict) :
@@ -145,6 +173,18 @@ def prepare_programming_assignment_input(input_dict) :
         'code': input_dict['code'],
         'resources': None, # TBA
         'document': None
+    }
+
+def prepare_course_doubt_input(input_dict) :
+    course_id = int(input_dict['tag'])
+
+    document = retrieve_document(course_id, input_dict['user_query'])
+
+    return {
+        'history': format_history(input_dict['history']),
+        'user_query': input_dict['user_query'],
+        'document': format_document(document),
+        'resources': None # TBA
     }
 
 #------------------------------------
@@ -348,6 +388,30 @@ def programming_assignment_prompt(input_dict) :
 
     return make_prompt(context, data, history, document, resources, query)
 
+def course_doubt_prompt(input_dict) :
+    context = '''
+    CONTEXT
+    - Answer the QUERY regarding the course content. 
+    DOCUMENT section contains support material for answering the query.
+    '''
+
+    data = ''
+
+    history = None
+    if input_dict['history'] :
+        history = history_temp.format(input_dict['history'])
+
+    document = None
+    if input_dict['document'] :
+        document = doc_temp.format(input_dict['document'])
+
+    resources = None
+    if input_dict['resources'] :
+        respources = res_temp.format(input_dict['resource'])
+
+    query = query_temp.format(input_dict['user_query'])
+
+    return make_prompt(context, data, history, document, resources, query)
 
 #------------------------------------
 #            LLM Chains
@@ -357,6 +421,7 @@ lecture_chain = RunnableLambda(prepare_lecture_input) | RunnableLambda(lecture_p
 practice_assignment_chain = RunnableLambda(prepare_assignment_input) | RunnableLambda(practice_assignment_prompt) | llm
 graded_assignment_chain = RunnableLambda(prepare_assignment_input) | RunnableLambda(graded_assignment_prompt) | llm
 programming_assignment_chain = RunnableLambda(prepare_programming_assignment_input) | RunnableLambda(programming_assignment_prompt) | llm
+course_doubt_chain = RunnableLambda(prepare_course_doubt_input) | RunnableLambda(course_doubt_prompt) | llm
 
 # from json to BaseMessages
 def messages_from_dict(messages):
@@ -370,7 +435,7 @@ def messages_from_dict(messages):
 
 def dict_from_messages(messages):
     msgs = []
-    for msg in messages.messages :
+    for msg in messages :
         if isinstance(msg, HumanMessage):
             msgs.append({
                 'role': 'user',
@@ -462,13 +527,19 @@ programming_assignment_history_chain = RunnableWithMessageHistory(
     input_messages_key='user_query',
     history_messages_key='history'
 )
+course_doubt_history_chain = RunnableWithMessageHistory(
+    course_doubt_chain,
+    get_by_session_id,
+    input_messages_key='user_query',
+    history_messages_key='history'
+)
 
 #------------------------------------
 #           ChatBot Function
 #------------------------------------
 def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
     if session_id  == None and session_id != 0:
-        session_id = len(store_dict.keys())
+        session_id = str(uuid.uuid4())
 
     config = {"configurable": {"session_id": session_id}}
     
@@ -478,18 +549,16 @@ def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
             'resources': resources
         }
     if context == 'lecture' :
-        info_copy = info.copy()
-        response = lecture_history_chain.invoke(info_copy, config=config)
+        response = lecture_history_chain.invoke(info, config=config)
     elif context == 'practice-assignment':
-        info_copy = info.copy()
-        response = practice_assignment_history_chain.invoke(info_copy, config=config)
+        response = practice_assignment_history_chain.invoke(info, config=config)
     elif context == 'graded-assignment' :
-        info_copy = info.copy()
-        response = graded_assignment_history_chain.invoke(info_copy, config=config)
+        response = graded_assignment_history_chain.invoke(info, config=config)
     elif context == 'programming-assignment' :
-        info_copy = info.copy()
-        info_copy['code'] = code
-        response = programming_assignment_history_chain.invoke(info_copy, config=config)
+        info['code'] = code
+        response = programming_assignment_history_chain.invoke(info, config=config)
+    elif context == 'course':
+        response = course_doubt_chain.invoke(info, config=config)
 
     return {
         'message': response,
@@ -497,4 +566,4 @@ def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
     }
 
 def fetch_history(session_id) :
-    return dict_from_messages(get_by_session_id(session_id))
+    return dict_from_messages(get_by_session_id(session_id).messages)
