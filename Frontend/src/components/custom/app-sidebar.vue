@@ -59,7 +59,7 @@ let navForInstructor  = [
       icon: NotebookPen, 
       isActive: true,
       items: [
-        { title: "Courses", url: "/instructor-dashboard/TA-course" },
+        { title: "Instructor Courses", url: "/instructor-dashboard/TA-course" },
       ],
       
     },
@@ -104,11 +104,9 @@ let navForStudents = [
       ],
     },
   ]
-  let navMain = store.state.user.role === "Instructor" 
+  let navMain = store.state.user.role === "instructor" 
   ? navForInstructor 
-  : store.state.user.role === "ta" 
-    ? navForTA 
-    : navForStudents;
+  : navForStudents;
 
 
 // Sample data using ref

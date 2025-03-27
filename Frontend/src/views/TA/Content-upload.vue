@@ -26,6 +26,7 @@ async function previousCourses(){
           'Authentication-Token': store.state.user.token,
         }}
         )
+      const nextupload =  ref([])
       for (const material of response.data.data.materials) {
         let newupload = {
             id:material.id ,
@@ -33,9 +34,11 @@ async function previousCourses(){
             type: material.type,
             fileName: material.path,
           }
-        uploads.value.unshift(newupload)
         
+        nextupload.value.unshift(newupload)
+
       }
+      uploads.value = nextupload.value
          
       
 }
@@ -58,7 +61,6 @@ const handleSubmit = () => {
   if (!title.value || !selectedFile.value) return
 
    const newupload= {
-    id: Date.now(),
     title: title.value,
     type: materialType.value,
     fileName: selectedFile.value.name,
@@ -70,8 +72,7 @@ const handleSubmit = () => {
   formData.append('title', title.value);
   formData.append('type', materialType.value);
   formData.append('file', selectedFile.value);
-
-  uploads.value.unshift(newupload)
+  
   axios.post(`http://127.0.0.1:5000/courses/${courseId}/materials`,formData,{
     headers: {
         'Content-Type': 'multipart/form-data',
@@ -80,6 +81,7 @@ const handleSubmit = () => {
   }).then(function (response) {
     console.log(response);
     successfullyUploaded.value = true
+    previousCourses()
     setTimeout(() => { 
      successfullyUploaded.value = false
     }, 3000);
@@ -109,6 +111,7 @@ const deleteUpload = (id) => {
       uploads.value = uploads.value.filter(upload => upload.id !== id)
     }, 300)
   }
+  console.log('DeleteUpload ssssss',id)
   deleteOneUpload(id)
 }
 

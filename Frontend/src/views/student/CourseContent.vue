@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeMount } from 'vue';
 import { Disclosure, DisclosureButton } from '@headlessui/vue';
-import { ChevronDown, ChevronRight, Play, BookOpen, ClipboardCheck, Pencil, Menu } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Play, BookOpen, ClipboardCheck, Pencil, Menu, SquareCode, PlayCircleIcon, CheckCircle2Icon, XCircleIcon } from 'lucide-vue-next';
 import Aibot from './Aibot.vue';
+import { toast, Toaster } from 'vue-sonner'
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 
@@ -20,66 +21,17 @@ let is_data_fetched = ref(false)
 let courseContent = ref([]);
 let selectedContent = ref({});
 const contentType = ref("graded")
+const code_store = ref({})
+const code_fetched = ref({})
 
 let expandedWeeks = ref([1]);
+const assignment = ref({});
 
 // this is for expanded week chnages
 function updateExpandedWeeks(newWeek) {
   expandedWeeks.value = [newWeek];
 }
 
-// function for change
-
-function transformCourseData(input) {
-    const result = [];
-    
-    for (const week of input) {
-        const transformedWeek = {
-            week: week.id,
-            title: week.title,
-            lectures: [],
-            practiceAssignments: [],
-            gradedAssignments: []
-        };
-        
-        for (const item of week.items || []) {
-            if (item.type === "lecture") {
-                transformedWeek.lectures.push({
-                    id: item.id,
-                    title: item.title,
-                    videoId: item.url?.split('v=')[1] || item.url?.split('/').pop() || ""
-                });
-            } else if (item.type === "practice-assignment") {
-                transformedWeek.practiceAssignments.push({
-                    id: item.id,
-                    title: item.title,
-                    questions: item.questions.map(question => ({
-                        text: question.question,
-                        options: question.options || [],
-                        correctAnswer: (question.answer && question.answer.length > 0 && question.options) 
-                            ? question.options.indexOf(question.answer[0]) 
-                            : -1 // Default to -1 if no valid answer is found
-                    }))
-                });
-            } else if (item.type === "programming-assignment") {
-                transformedWeek.gradedAssignments.push({
-                    id: item.id,
-                    title: item.title,
-                    questions: [{
-                        text: item.question,
-                        options: item.cases?.map(c => c.output) || [],
-                        correctAnswer: 0
-                    }]
-                });
-            }
-        }
-        
-        result.push(transformedWeek);
-    }
-    
-    return result;
-}
-// dhaojdhoahodiihaoidhoiahdoiuuahywd
 
 async function fetchCourseData() {
   try {
@@ -92,7 +44,7 @@ async function fetchCourseData() {
     const contentString = response.data.data.course.content;
     
     // Convert the JSON string back to an object
-    const coursecontent = transformCourseData(JSON.parse(contentString));
+    const coursecontent = JSON.parse(contentString);
     
     // Assign the transformed content (keeping it as an object)
     courseContent.value = coursecontent;
@@ -100,12 +52,8 @@ async function fetchCourseData() {
     is_data_fetched.value = true;
 
     // Ensure courseContent is not empty before accessing properties
-    if (courseContent.value.length > 0 && courseContent.value[0].lectures.length > 0) {
-      selectedContent.value = {
-        type: "video",
-        id: courseContent.value[0].lectures[0].id,
-        data: courseContent.value[0].lectures[0],
-      };
+    if (courseContent.value.length > 0 && courseContent.value[0].items.length > 0) {
+      selectContent(courseContent.value[0].items[0])
     }
 
   } catch (error) {
@@ -113,34 +61,82 @@ async function fetchCourseData() {
   }
 }
 
+function selectContent(item) {
 
-// dapijdiajdoijapoidjpioajdpoijapoidiuja
-
-const currentWeek = computed(() => {
-  if(is_data_fetched){
-    return courseContent.value.find(week => {
-    if (selectedContent.value.type === 'video') {
-      return week.lectures.some(lecture => lecture.id === selectedContent.value.id);
-    } else if (selectedContent.value.type === 'graded') {
-      return week.gradedAssignments.some(assignment => assignment.id === selectedContent.value.id);
-    } else {
-      return week.practiceAssignments.some(assignment => assignment.id === selectedContent.value.id);
-    }
-  })?.week;
+  if (item.type == 'practice-assignment' || item.type == 'graded-assignment') {
+    for (const question of item.questions) {
+      if (question.type == 'option-many') {
+        question.selectedAnswer = []
+      }
+    } 
   }
-});
+  selectedContent.value = item;
+  if (item.type == 'practice-assignment' || item.type == 'graded-assignment') {
+    fetchAssignmentSubmission()
+  }
+  if (item.type == 'programming-assignment'){
+    fetchAssignmentSubmission()
+    console.log(selectedContent.value)
+    assignment.value = selectedContent.value
+  }
+}
 
-function selectContent(type, content) {
-  selectedContent.value = {
-    type: type,
-    id: content.id,
-    data: content
-  };
+
+// this is for programming assignment test 
+
+
+const code = ref('')
+const result = ref(null)
+
+const runCode = async () => {
+  if (!code.value.trim()) {
+    toast.error('Please enter some code before submitting')
+    return
+  }
+
+  try {
+    code_store.value = code.value
+    console.log(code_store.value)
+    // Simulate code execution (in a real app, this would call your backend)
+    const submissionPayload = {
+      assignment_id: `${courseId}-${expandedWeeks.value}-${selectedContent.value.id}`,
+      content: code_store.value, // Store content as expected JSON format
+    };
+
+    MakeAssignmentSubmission(submissionPayload);
+
+  } catch (error) {
+    console.log('Failed to execute code')
+  }
 }
 
 // these are used for submissions -----------------------------------------------------------------------------
+function is_selected(question, option) {
+  if (question.type == 'option-many') {
+    return question.selectedAnswer.includes(option)
+  } else {
+    return question.selectedAnswer === option
+  }
+}
 
-async function fetchAssignmentSubmission(finalData) {
+function updateEval(result) {
+  selectedContent.value.eval = "yes";
+  const len = selectedContent.value.questions.length
+  console.log(selectedContent.value.questions)
+  for (let i=0; i< len; i++) {
+    if (selectedContent.value.questions[i].type == 'option-many') {
+      selectedContent.value.questions[i].selectedAnswer = result.content[i].option
+    }else {
+      selectedContent.value.questions[i].selectedAnswer = result.content[i].option[0]
+    }
+    if (result.content[i].correct == 1) {
+      selectedContent.value.questions[i].correct = 1;
+    }
+  }
+}
+
+async function MakeAssignmentSubmission(finalData) {
+  console.log(finalData)
   try {
     const response = await axios.post(`http://127.0.0.1:5000/submissions`, finalData, {
       headers: {
@@ -148,58 +144,88 @@ async function fetchAssignmentSubmission(finalData) {
       },
     });
     console.log("Submission successful", response.data);
+    let result = response.data.data;
+
+    if (selectedContent.value.type != "programming-assignment"){
+        updateEval(result)
+    }
+    fetchAssignmentSubmission()
+
   } catch (error) {
     console.error("Error submitting assignment:", error);
   }
 }
 
+async function fetchAssignmentSubmission() {
+   try {
+    let assignment_id = courseId + '-' + expandedWeeks.value + '-' + selectedContent.value.id
+    const response = await axios.get(`http://127.0.0.1:5000/submissions/` + assignment_id, {
+      headers: {
+        "Authentication-Token": store.state.user.token,
+      },
+    });
+    let output_result = JSON.parse(response.data.data.submission.content);
+    if (response.data.status.success == 1) {
+      if (selectedContent.value.type != "programming-assignment"){
+      updateEval({'content': output_result})
+      }else{
+        const output = output_result.cases[0].output
+        const passed = output_result.cases[0].pass === 1 ? true : false;
+        code.value = output_result.code
+        result.value = { passed , output }
+      }
+    }
+
+  } catch (error) {
+    console.error("Error submitting assignment:", error);
+  }
+
+}
+
+function prepareOutput(question) {
+  if (question.type == 'option-many') {
+    return {
+      id: question.id,
+      option: question.selectedAnswer
+    }
+  } else {
+    return {
+      id: question.id,
+      option: [question.selectedAnswer]
+    }
+  }
+}
 
 function storeSelectedAnswers() {
-  const assignment = selectedContent.value.data;
+  const assignment = selectedContent.value;
   let data = "";
 
-  const storedAnswers = assignment.questions.map((question, index) => ({
-    id: index + 1, // Ensure ID is included
-    option: [question.options[question.selectedAnswer]]
-  }));
+  const storedAnswers = assignment.questions.map(prepareOutput);
   
-  if(contentType.value === "graded"){
-    data = storedAnswers;
-  }else{
-    data = JSON.stringify(storedAnswers);
-  }
+  console.log(storedAnswers)
+
+  data = JSON.stringify(storedAnswers);
   
   return data;
 }
 
 function submitAssignment() {
-  const assignment = selectedContent.value.data;
-  console.log(selectedContent.value.type)
-  contentType.value = selectedContent.value.type
-  console.log(expandedWeeks.value)
-  let correctAnswers = 0;
-  let totalQuestions = assignment.questions.length;
+    const assignment = selectedContent.value;
+    console.log("this is it", selectedContent.value.type);
+    contentType.value = selectedContent.value.type;
+    console.log(expandedWeeks.value);
+    // let correctAnswers = 0;
+    // let totalQuestions = assignment.questions.length;
+    const storedData = storeSelectedAnswers();
 
-  assignment.questions.forEach(question => {
-    if (question.selectedAnswer === question.correctAnswer) {
-      correctAnswers++;
-    }
-  });
+    const submissionPayload = {
+      assignment_id: `${courseId}-${expandedWeeks.value}-${selectedContent.value.id}`,
+      content: storedData, // Store content as expected JSON format
+    };
 
-  const storedData = storeSelectedAnswers();
-  console.log(storeSelectedAnswers());
-
-  const submissionPayload = {
-    assignment_id: `${courseId}-${expandedWeeks.value}-${selectedContent.value.id}`,
-    content: storedData // Store content as expected JSON format
-  };
-
-  console.log(submissionPayload);
-  
-  alert(`You got ${correctAnswers} out of ${totalQuestions} questions correct!`);
-  
-  fetchAssignmentSubmission(submissionPayload); // Call API function with formatted JSON data
-}
+    // console.log(submissionPayload);
+    MakeAssignmentSubmission(submissionPayload); // Call API function with formatted JSON data
+  }
 
 onBeforeMount(fetchCourseData);
 </script>
@@ -208,30 +234,29 @@ onBeforeMount(fetchCourseData);
 
 <template>
 
-  <div v-if="is_data_fetched" class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div v-if="is_data_fetched" class="min-h-full bg-gray-50 dark:bg-gray-900">
     <div class="flex h-screen">
 
       <!-- Sidebar -->
       <Transition name="slide">
-        <div v-show="isSidebarOpen" class="w-80 bg-white dark:bg-gray-800 shadow-lg fixed md:relative h-screen z-40">
+        <div v-show="isSidebarOpen" class="w-80 bg-white dark:bg-gray-800 shadow-lg fixed md:relative min-h-full z-40">
 
-          <div class="h-full overflow-y-auto custom-scrollbar">
+          <div class="min-h-screen overflow-y-auto custom-scrollbar">
             <div class="p-4 pt-16 md:pt-4">
               <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Course Content</h2>
               <div class="h-px bg-gray-200 dark:bg-gray-700 mb-4"></div>
 
               <TransitionGroup name="list">
-                <div v-for="week in courseContent" :key="week.week" class="mb-4">
-                  <Disclosure v-slot="{ open }" :defaultOpen="expandedWeeks.includes(week.week)">
-                    <DisclosureButton as="button" @click="updateExpandedWeeks(week.week)"
+                <div v-for="section in courseContent" :key="section.id" class="mb-4">
+                  <Disclosure v-slot="{ open }" :defaultOpen="expandedWeeks.includes(section.id)">
+                    <DisclosureButton as="button" @click="updateExpandedWeeks(section.id)"
                       class="flex items-center w-full p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200">
                       <ChevronDown v-if="open"
                         class="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400 transform transition-transform duration-200" />
                       <ChevronRight v-else
                         class="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400 transform transition-transform duration-200" />
                       <div>
-                        <div class="font-medium text-left text-gray-900 dark:text-white">Week {{ week.week }}</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400 text-left">{{ week.title }}</div>
+                        <div class="font-medium text-left text-gray-900 dark:text-white">{{ section.title }}</div>
                       </div>
                     </DisclosureButton>
 
@@ -239,44 +264,18 @@ onBeforeMount(fetchCourseData);
                       <div v-show="open" class="pl-7 mt-2 space-y-2 overflow-hidden">
                         <!-- Lectures -->
                         <div class="mb-2">
-                          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Lectures</div>
-                          <button v-for="lecture in week.lectures" :key="lecture.id"
-                            @click="selectContent('video', lecture)" :class="[
-                              'flex items-center w-full p-2 rounded-md text-left text-sm transition-all duration-200',
+                          <button v-for="item in section.items" :key="item.id"
+                            @click="selectContent(item)" :class="[
+                              'flex items-center w-full p-2 ps-1 rounded-md text-left text-sm transition-all duration-200',
                               'hover:bg-gray-100 dark:hover:bg-gray-700 transform hover:translate-x-1',
-                              selectedContent.type === 'video' && selectedContent.id === lecture.id ? 'bg-gray-100 dark:bg-gray-700 translate-x-1' : ''
+                              selectedContent.type === item.type && selectedContent.id === item.id ? 'bg-gray-100 dark:bg-gray-700 translate-x-1' : ''
                             ]">
-                            <Play class="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ lecture.title }}</span>
-                          </button>
-                        </div>
+                            <Play v-if="item.type == 'lecture'" class="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <ClipboardCheck v-if="item.type == 'graded-assignment'" class="h-4 w-4 mr-2 text-emerald-500" />
+                            <Pencil v-if="item.type == 'practice-assignment'" class="h-4 w-4 mr-2 text-blue-500" />
+                            <SquareCode v-if="item.type == 'programming-assignment'" class="h-4 w-4 mr-2 text-red-500" />
 
-                        <!-- Graded Assignments -->
-                        <div class="mb-2">
-                          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Graded Assignments
-                          </div>
-                          <button v-for="assignment in week.gradedAssignments" :key="assignment.id"
-                            @click="selectContent('graded', assignment)" :class="[
-                              'flex items-center w-full p-2 rounded-md text-left text-sm transition-all duration-200',
-                              'hover:bg-gray-100 dark:hover:bg-gray-700 transform hover:translate-x-1',
-                              selectedContent.type === 'graded' && selectedContent.id === assignment.id ? 'bg-gray-100 dark:bg-gray-700 translate-x-1' : ''
-                            ]">
-                            <ClipboardCheck class="h-4 w-4 mr-2 text-emerald-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ assignment.title }}</span>
-                          </button>
-                        </div>
-
-                        <!-- Practice Assignments -->
-                        <div>
-                          <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Practice</div>
-                          <button v-for="practice in week.practiceAssignments" :key="practice.id"
-                            @click="selectContent('practice', practice)" :class="[
-                              'flex items-center w-full p-2 rounded-md text-left text-sm transition-all duration-200',
-                              'hover:bg-gray-100 dark:hover:bg-gray-700 transform hover:translate-x-1',
-                              selectedContent.type === 'practice' && selectedContent.id === practice.id ? 'bg-gray-100 dark:bg-gray-700 translate-x-1' : ''
-                            ]">
-                            <Pencil class="h-4 w-4 mr-2 text-blue-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ practice.title }}</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ item.title }}</span>
                           </button>
                         </div>
                       </div>
@@ -295,59 +294,146 @@ onBeforeMount(fetchCourseData);
         isSidebarOpen ? 'md:ml-0' : 'ml-0'
       ]">
         <div class="max-w-4xl mx-auto pt-16 md:pt-4">
-          <h1 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Programming Fundamentals</h1>
 
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
             <Transition name="fade" mode="out-in">
               <!-- Video Content -->
-              <div v-if="selectedContent.type === 'video'" :key="'video'">
+              <div v-if="selectedContent.type === 'lecture'" :key="selectedContent.id">
+                <div class="my-4">
+                  <h3 class="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {{ selectedContent.title }}
+                  </h3>
+                </div>
                 <div class="aspect-video bg-black rounded-md overflow-hidden">
-                  <iframe :key="selectedContent.data.videoId" class="w-full h-full"
-                    :src="'https://www.youtube.com/embed/' + selectedContent.data.videoId" title="Course Video"
+                  <iframe :key="selectedContent.url" class="w-full h-full"
+                    :src="'https://www.youtube.com/embed/' + selectedContent.url" title="Course Video"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
                 </div>
-                <div class="mt-4">
-                  <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                    {{ selectedContent.data.title }}
-                  </h3>
-                  <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    <BookOpen class="h-4 w-4 mr-2" />
-                    <span>Week {{ currentWeek }}</span>
+              </div>
+
+              <!-- Programming Assignment -->
+              <div v-else-if="selectedContent.type == 'programming-assignment'" :key="selectedContent.id">
+
+                <div class="flex items-center justify-between">
+                  <!-- this is for programming assignment  -->
+                  <div class="min-h-screen bg-background py-8 px-4 scroll-container">
+                    <div class="max-w-4xl mx-auto space-y-8">
+                      <!-- Assignment Details -->
+                      <div class="bg-card text-card-foreground rounded-lg shadow-md overflow-hidden">
+                        <div class="p-6">
+                          <h2 class="text-2xl font-bold">{{ assignment.title }}</h2>
+                          <p class="text-lg mt-2 text-muted-foreground">
+                            Type: {{ assignment.type }}
+                          </p>
+                        </div>
+                        <div class="px-6 pb-6">
+                          <div class="prose dark:prose-invert max-w-none">
+                            <h3 class="text-lg font-semibold mb-2">Question:</h3>
+                            <p class="text-card-foreground">{{ assignment.question }}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Code Editor -->
+                      <div class="bg-card text-card-foreground rounded-lg shadow-md overflow-hidden">
+                        <div class="p-6">
+                          <div class="flex items-center gap-2 mb-4">
+                            <play-circle-icon class="w-5 h-5" />
+                            <h2 class="text-xl font-semibold">Python Code Editor</h2>
+                          </div>
+                          <textarea
+                            v-model="code"
+                            placeholder="Enter your Python code here..."
+                            class="w-full min-h-[200px] p-4 font-mono bg-muted text-foreground rounded-md border border-input focus:outline-none focus:ring-2 focus:ring-ring"
+                          />
+                          <button
+                            @click="runCode"
+                            class="mt-4 w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 px-6 rounded-md font-medium transition-colors"
+                          >
+                            Run Code
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Results -->
+                      <div v-if="result" class="bg-card text-card-foreground rounded-lg shadow-md overflow-hidden">
+                        <div class="p-6">
+                          <div class="flex items-center gap-2 mb-4">
+                            <check-circle-2-icon v-if="result.passed" class="w-5 h-5 text-green-500" />
+                            <x-circle-icon v-else class="w-5 h-5 text-red-500" />
+                            <h2 class="text-xl font-semibold">Test Results</h2>
+                          </div>
+                          <div class="bg-muted p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2">Output:</h4>
+                            <pre class="whitespace-pre-wrap font-mono text-sm">{{ result.output }}</pre>
+                          </div>
+                          <div
+                            :class="[
+                              'mt-4 p-4 rounded-lg',
+                              result.passed
+                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                                : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                            ]"
+                          >
+                            {{ result.passed ? '✅ All test cases passed!' : '❌ Some test cases failed. Please check your code and try again.' }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                  <Toaster position="top-right" />
                 </div>
               </div>
 
               <!-- Assignment Content -->
-              <div v-else :key="'assignment'" class="space-y-6">
+              <div v-else :key="selectedContent.id" class="min-h-screen space-y-6 scroll-container_2">
                 <div class="flex items-center justify-between">
                   <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                    {{ selectedContent.data.title }}
+                    {{ selectedContent.title }}
                   </h3>
                   <span :class="[
                     'px-3 py-1 rounded-full text-sm font-medium',
-                    selectedContent.type === 'graded'
+                    selectedContent.type === 'graded-assignment'
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-100'
                       : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
                   ]">
-                    {{ selectedContent.type === 'graded' ? 'Graded' : 'Practice' }}
+                    {{ selectedContent.type === 'graded-assignment' ? 'Graded' : 'Practice' }}
                   </span>
                 </div>
 
-                <div v-for="(question, index) in selectedContent.data.questions" :key="index"
+                <div v-for="question in selectedContent.questions" :key="question.id"
                   class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <p class="text-gray-900 dark:text-white font-medium mb-4">{{ index + 1 }}. {{ question.text }}</p>
+                  <p class="text-gray-900 dark:text-white font-medium mb-4">{{ question.id }}. {{ question.question }}</p>
                   <div class="space-y-2">
                     <label v-for="(option, optIndex) in question.options" :key="optIndex" :class="[
                       'flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200',
-                      question.selectedAnswer === optIndex
+                      is_selected(question, option)
                         ? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-500'
                         : 'bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-600 border-2 border-transparent'
                     ]">
-                      <input type="radio" :name="'question-' + index" :value="optIndex"
-                        v-model="question.selectedAnswer" class="hidden" />
+                      <input v-if="question.type == 'option-one'" type="radio" :name="'question-' + question.id" :value="option"
+                        v-model="question.selectedAnswer" class='hidden'/>
+                      <input v-if="question.type == 'option-many'" type="checkbox" :id="'question-' + question.id + '-' + optIndex" :value="option"
+                        v-model="question.selectedAnswer" class='hidden'/>
                       <span class="text-gray-700 dark:text-gray-300">{{ option }}</span>
                     </label>
+                    <input v-if="question.type == 'text'" type="text" :name="'question-' + question.id" v-model="question.selectedAnswer"
+                    class="block w-full rounded-md border-gray-300 px-3 py-2 text-white-900 shadow-sm focus:ring-2 focus:ring-blue-600 focus:outline-none sm:text-sm transition-all duration-300  dark:bg-gray-800 border-2 border-transparent"
+                    >
+                    <div class="space-y-2">
+                        <label v-if="selectedContent.eval == 'yes'"
+                          :class="[question.correct ? 'text-green-500' : 'text-red-500']"
+                        >
+                          {{ question.correct == 1 ? 'Your answer is correct' : 'Your answer is wrong ' }}<br><br v-if="question.correct != 1">
+                          <label v-if="question.correct != 1">Correct Answer(s) :</label><br>
+                          <div>
+                              <label v-for="answer in question.answer">
+                                {{answer}}<br>
+                              </label>
+                          </div>
+                        </label>
+                    </div>
                   </div>
                 </div>
 
@@ -448,6 +534,19 @@ onBeforeMount(fetchCourseData);
   opacity: 0;
 }
 
+/* Scrollable container */
+.scroll-container {
+  max-height: 500px; /* Set a max height */
+  overflow-y: auto; /* Enable vertical scrolling */
+  padding-right: 8px; /* Avoid cutting off content */
+  margin-left: 90px;
+}
+
+.scroll-container_2 {
+  max-height: 500px; /* Set a max height */
+  overflow-y: auto; /* Enable vertical scrolling */
+  padding-right: 8px; /* Avoid cutting off content */
+}
 @media (prefers-color-scheme: dark) {
   .custom-scrollbar {
     scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
@@ -462,153 +561,3 @@ onBeforeMount(fetchCourseData);
   }
 }
 </style>
-
-
-
-
-
-<!-- 
-// const courseContent = [
-//     {
-//       "week": 1,
-//       "title": "Introduction to Programming",
-//       "lectures": [
-//         { "id": 1, "title": "Getting Started", "videoId": "W6NZfCO5SIk" },
-//         { "id": 2, "title": "Basic Concepts", "videoId": "PkZNo7MFNFg" }
-//       ],
-//       "gradedAssignments": [
-//         {
-//           "id": 101,
-//           "title": "Programming Basics Quiz",
-//           "questions": [
-//             {
-//               "text": "What is a variable?",
-//               "options": [
-//                 "A container for storing data values",
-//                 "A mathematical operation",
-//                 "A type of loop",
-//                 "A function name"
-//               ],
-//               "correctAnswer": 0
-//             },
-//             {
-//               "text": "Which of the following is a valid variable name in JavaScript?",
-//               "options": [
-//                 "123variable",
-//                 "_myVariable",
-//                 "my-variable",
-//                 "class"
-//               ],
-//               "correctAnswer": 1
-//             }
-//           ]
-//         }
-//       ],
-//       "practiceAssignments": [
-//         {
-//           "id": 201,
-//           "title": "Variables Practice",
-//           "questions": [
-//             {
-//               "text": "What will be the output of: console.log(typeof 42)?",
-//               "options": [
-//                 "string",
-//                 "number",
-//                 "integer",
-//                 "float"
-//               ],
-//               "correctAnswer": 1
-//             }
-//           ]
-//         }
-//       ]
-//     },
-//     {
-//       "week": 2,
-//       "title": "Control Structures",
-//       "lectures": [
-//         { "id": 3, "title": "Conditional Statements", "videoId": "7WiJGTPuVeU" },
-//         { "id": 4, "title": "Loops and Iterations", "videoId": "s9wW2PpJsmQ" }
-//       ],
-//       "gradedAssignments": [
-//         {
-//           "id": 102,
-//           "title": "Control Flow Assessment",
-//           "questions": [
-//             {
-//               "text": "Which statement is used to exit a loop in JavaScript?",
-//               "options": [
-//                 "exit",
-//                 "break",
-//                 "return",
-//                 "continue"
-//               ],
-//               "correctAnswer": 1
-//             }
-//           ]
-//         }
-//       ],
-//       "practiceAssignments": [
-//         {
-//           "id": 202,
-//           "title": "Loops Practice",
-//           "questions": [
-//             {
-//               "text": "What is the output of: for(let i=0; i<3; i++) { console.log(i); }",
-//               "options": [
-//                 "0, 1, 2",
-//                 "1, 2, 3",
-//                 "0, 1, 2, 3",
-//                 "1, 2"
-//               ],
-//               "correctAnswer": 0
-//             }
-//           ]
-//         }
-//       ]
-//     },
-//     {
-//       "week": 3,
-//       "title": "Functions and Objects",
-//       "lectures": [
-//         { "id": 5, "title": "Functions Basics", "videoId": "N8ap4k_1QEQ" },
-//         { "id": 6, "title": "Object-Oriented Programming", "videoId": "PFmuCDHHpwk" }
-//       ],
-//       "gradedAssignments": [
-//         {
-//           "id": 103,
-//           "title": "Functions Quiz",
-//           "questions": [
-//             {
-//               "text": "What is a pure function?",
-//               "options": [
-//                 "A function that only uses global variables",
-//                 "A function that always returns the same output for the same input",
-//                 "A function that modifies its parameters",
-//                 "A function without parameters"
-//               ],
-//               "correctAnswer": 1
-//             }
-//           ]
-//         }
-//       ],
-//       "practiceAssignments": [
-//         {
-//           "id": 203,
-//           "title": "Objects Practice",
-//           "questions": [
-//             {
-//               "text": "How do you access a property named 'age' in an object 'person'?",
-//               "options": [
-//                 "person[age]",
-//                 "person->age",
-//                 "person.age",
-//                 "person::age"
-//               ],
-//               "correctAnswer": 2
-//             }
-//           ]
-//         }
-//       ]
-//     }
-//   ] -->
