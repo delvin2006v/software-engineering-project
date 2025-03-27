@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from langchain_core.runnables import RunnableWithMessageHistory, RunnableLambda
 from .sample_admin import embedder, client
 import uuid
+import markdown
 
 ytt_api = YouTubeTranscriptApi()
 
@@ -54,9 +55,11 @@ class CustomLLM(LLM):
         
         if isinstance(result, dict) and result.get("error"):
             raise Exception(f"HuggingFace API error: {result['error']}")
-        
+        print('\n', '-'*30)
+        print(result)
+        print('\n', '-'*30)
         generated_text = result[0].get("generated_text", "")
-        return generated_text #.split('<-->')[-1]
+        return generated_text.split('<-->')[-1].strip('\n ')
 
     @property
     def _llm_type(self) -> str:
@@ -477,6 +480,7 @@ class FileChatMessageHistory(BaseChatMessageHistory, BaseModel):
         self.load_messages()
 
     def add_message(self, message) -> None:
+        message.content = message.content.replace('\n\n\n', '\n').replace('\n\n', '\n')
         self.messages.append(message)
         messages = dict_from_messages(self.messages)
         store_dict[self.session_id] = messages
@@ -565,5 +569,17 @@ def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
         'session_id': session_id
     }
 
-def fetch_history(session_id) :
-    return dict_from_messages(get_by_session_id(session_id).messages)
+def fetch_history(session_id, is_html) :
+    s = dict_from_messages(get_by_session_id(session_id).messages)
+    copy = s.copy()
+    if not is_html :
+        return copy
+    for i in range(len(s)):
+        if s[i]['role'] == 'agent' :
+            copy[i]['message'] = markdown.markdown(copy[i]['message'], 
+                output='html', 
+                extensions=['fenced_code', 'nl2br']
+            ).replace('\n', '<br>').replace('><br><','><')
+
+
+    return copy

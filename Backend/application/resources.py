@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import desc
 from .sample_agent import chatbot, fetch_history
 from .sample_admin import upload_file, delete_file, update_file
+import markdown
 
 user_datastore = security.datastore
 
@@ -354,7 +355,7 @@ class ChatOutlineApi(Resource) :
         if not len(pars) == 1:
             if len(pars) > 3 :
                 course_id, section_id, content_id, question_id = pars
-            elif :
+            else :
                 course_id, section_id, content_id = pars
 
             flag = False
@@ -390,7 +391,7 @@ class ChatOutlineApi(Resource) :
             response = chatbot(
                 'course',
                 tag,
-                query
+                query,
                 resources=resources
             )
 
@@ -400,7 +401,14 @@ class ChatOutlineApi(Resource) :
         db.session.add(chat)
         db.session.commit()
 
-        return output(200, 'Chat Created successfully', {'message': response['message'], 'session_id': response['session_id']})
+        return output(200, 'Chat Created successfully', 
+            {
+                'message': markdown.markdown(response['message'], 
+                                output='html', 
+                                extensions=['fenced_code', 'nl2br']
+                            ).replace('\n', '<br>').replace('><br><','><'), 
+                'session_id': response['session_id']
+            })
 
 # ChatApi
 class ChatApi(Resource) :
@@ -424,7 +432,7 @@ class ChatApi(Resource) :
         if not chat :
             return output(404, 'Chat history not found')
 
-        return output(200, 'Chat history fetched successfully', {"chat": fetch_history(session_id)})
+        return output(200, 'Chat history fetched successfully', {"chat": fetch_history(session_id, True)})
 
 
     @auth_required('token')
@@ -456,7 +464,7 @@ class ChatApi(Resource) :
         if not len(pars) == 1:
             if len(pars) > 3 :
                 course_id, section_id, content_id, question_id = pars
-            elif :
+            else :
                 course_id, section_id, content_id = pars
 
             flag = False
@@ -505,7 +513,14 @@ class ChatApi(Resource) :
                 session_id=session_id
             )
 
-        return output(200, 'Message added successfully', {'message': response['message'], 'session_id': session_id})
+        return output(200, 'Message added successfully', 
+            {
+                'message': markdown.markdown(response['message'], 
+                                output='html', 
+                                extensions=['fenced_code', 'nl2br']
+                            ).replace('\n', '<br>').replace('><br><','><'), 
+                'session_id': session_id
+            })
 
     @auth_required('token')
     @validate_token()
@@ -549,6 +564,6 @@ class ChatApi(Resource) :
 
         if not chat :
             return output(404, 'Chat history not found')
-        path = export_chat(fetch_history(session_id), session_id)
+        path = export_chat(fetch_history(session_id, False), session_id)
 
         return output(200, 'Chat exported successfully', {'path': path})

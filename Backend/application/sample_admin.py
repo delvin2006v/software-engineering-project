@@ -38,6 +38,7 @@ class MyEmbeddings(Embeddings):
             result = response.json()
             return result
         except:
+            result = None
             print(response.content)
         if isinstance(result, dict) and result.get("error"):
             raise Exception(f"HuggingFace API error: {result['error']}")
@@ -166,7 +167,7 @@ def upload_file(upload_file_path, course_id, title):
         if all_docs:
             update_vector_store(all_docs, course_id, title)
 
-def delete_file(course_id, title)
+def delete_file(course_id, title):
     
     res = client.delete(
         collection_name='course_docs',
