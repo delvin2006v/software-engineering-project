@@ -10,6 +10,8 @@ import { useStore } from 'vuex';
 const route = useRoute();
 const store = useStore();
 const isSidebarOpen = ref(true);
+const showAIBotPopup = ref(false);
+const activeQuestionId = ref(null);
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -31,6 +33,15 @@ const assignment = ref({});
 function updateExpandedWeeks(newWeek) {
   expandedWeeks.value = [newWeek];
 }
+
+const openAIBot = (questionId) => {
+  activeQuestionId.value = questionId;
+  showAIBotPopup.value = true;
+};
+
+const closeAIBot = () => {
+  showAIBotPopup.value = false;
+};
 
 
 async function fetchCourseData() {
@@ -310,6 +321,8 @@ onBeforeMount(fetchCourseData);
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
                 </div>
+                
+                <Aibot :content_type=selectedContent.type :assignment_id=selectedContent.id :course_id=Number(courseId) :week="expandedWeeks[0]"/>
               </div>
 
               <!-- Programming Assignment -->
@@ -334,6 +347,7 @@ onBeforeMount(fetchCourseData);
                           </div>
                         </div>
                       </div>
+                      <Aibot :content_type=selectedContent.type :assignment_id=selectedContent.id :course_id=Number(courseId) :week="expandedWeeks[0]"/>
 
                       <!-- Code Editor -->
                       <div class="bg-card text-card-foreground rounded-lg shadow-md overflow-hidden">
@@ -402,11 +416,21 @@ onBeforeMount(fetchCourseData);
                   </span>
                 </div>
 
+                <!-- Questions Loop -->
                 <div v-for="question in selectedContent.questions" :key="question.id"
-                  class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <p class="text-gray-900 dark:text-white font-medium mb-4">{{ question.id }}. {{ question.question }}</p>
+                  class="relative p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  
+                  <!-- AI Bot Button inside each question block -->
+                  <button @click="openAIBot(question.id)" class="aibot-button">
+                    🤖
+                  </button>
+
+                  <p class="text-gray-900 dark:text-white font-medium mb-4">
+                    {{ question.id }}. {{ question.question }}
+                  </p>
+
                   <div class="space-y-2">
-                    <label v-for="(option, optIndex) in question.options" :key="optIndex" :class="[
+                    <label v-for="(option, optIndex) in question.options" :key="optIndex" :class="[ 
                       'flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200',
                       is_selected(question, option)
                         ? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-500'
@@ -418,32 +442,41 @@ onBeforeMount(fetchCourseData);
                         v-model="question.selectedAnswer" class='hidden'/>
                       <span class="text-gray-700 dark:text-gray-300">{{ option }}</span>
                     </label>
+
                     <input v-if="question.type == 'text'" type="text" :name="'question-' + question.id" v-model="question.selectedAnswer"
-                    class="block w-full rounded-md border-gray-300 px-3 py-2 text-white-900 shadow-sm focus:ring-2 focus:ring-blue-600 focus:outline-none sm:text-sm transition-all duration-300  dark:bg-gray-800 border-2 border-transparent"
-                    >
+                    class="block w-full rounded-md border-gray-300 px-3 py-2 text-white-900 shadow-sm focus:ring-2 focus:ring-blue-600 focus:outline-none sm:text-sm transition-all duration-300 dark:bg-gray-800 border-2 border-transparent"/>
+
                     <div class="space-y-2">
-                        <label v-if="selectedContent.eval == 'yes'"
-                          :class="[question.correct ? 'text-green-500' : 'text-red-500']"
-                        >
-                          {{ question.correct == 1 ? 'Your answer is correct' : 'Your answer is wrong ' }}<br><br v-if="question.correct != 1">
-                          <label v-if="question.correct != 1">Correct Answer(s) :</label><br>
-                          <div>
-                              <label v-for="answer in question.answer">
-                                {{answer}}<br>
-                              </label>
-                          </div>
-                        </label>
+                      <label v-if="selectedContent.eval == 'yes'"
+                        :class="[question.correct ? 'text-green-500' : 'text-red-500']">
+                        {{ question.correct == 1 ? 'Your answer is correct' : 'Your answer is wrong ' }}<br>
+                        <br v-if="question.correct != 1">
+                        <label v-if="question.correct != 1">Correct Answer(s):</label><br>
+                        <div>
+                          <label v-for="answer in question.answer">
+                            {{ answer }}<br>
+                          </label>
+                        </div>
+                      </label>
                     </div>
                   </div>
                 </div>
 
+                <!-- AI Bot Popup Modal -->
+                <div v-if="showAIBotPopup" class="aibot-popup">
+                  <div class="popup-content">
+                    <button class="close-button" @click="closeAIBot">&times;</button>
+                    <Aibot :content_type="selectedContent.type" :assignment_id="selectedContent.id" :question_id="activeQuestionId" :course_id=Number(courseId) :week="expandedWeeks[0]"/>
+                  </div>
+                </div>
+
+                <!-- Submit Assignment Button -->
                 <button @click="submitAssignment"
                   class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200">
                   Submit Assignment
                 </button>
               </div>
             </Transition>
-            <Aibot></Aibot>
           </div>
         </div>
       </div>
@@ -533,6 +566,70 @@ onBeforeMount(fetchCourseData);
   max-height: 0;
   opacity: 0;
 }
+
+/* Ai bot  */
+
+/* AI Bot Button */
+.aibot-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.aibot-button:hover {
+  background-color: #2980b9;
+  transform: scale(1.1);
+}
+
+/* AI Bot Popup */
+.aibot-popup {
+  position: fixed;
+  top: 800px;
+  left: 1800px;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+}
+
+/* Popup Content */
+.popup-content {
+  position: relative;
+  width: 400px;
+  max-width: 90%;
+}
+
+/* Close Button */
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 44px;
+  font-weight: bold;
+  color: #555;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.close-button:hover {
+  color: #ff0000;
+}
+
 
 /* Scrollable container */
 .scroll-container {

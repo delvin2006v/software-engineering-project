@@ -1,5 +1,7 @@
 <script setup>
-  import { ref, computed } from 'vue';
+  import { ref, computed, nextTick, onBeforeMount } from 'vue';
+  import { useStore } from 'vuex';
+
   import {
     MessageCircle,
     Bot,
@@ -9,60 +11,178 @@
     Trash2,
   } from 'lucide-vue-next';
   
+import axios from 'axios'
+ const store=useStore()
+
   const isOpen = ref(false);
   const activeTab = ref('Chat');
   const currentMessage = ref('');
   const chats = ref([]);
   const activeChat = ref(null);
   const messagesContainer = ref(null);
-  
+  const isChatStarted = ref(false); // Tracks if API was called initially
+  const apiPayload = ref({})
+  const newMessage = ref({})
+  const session_id = ref(null)
+  const allChats_history =ref([])
   const currentChat = computed(() => {
+    console.log(chats.value)
     return chats.value.find(chat => chat.id === activeChat.value) || null;
   });
+
+// Define props
+const props = defineProps({
+  content_type: String,
+  assignment_id: Number,
+  question_id: Number,
+  course_id: Number,
+  week: Number
+});
+
+// these are the api payloads
+
+const generateApiPayload = () => {
+  const payload = {
+    query: currentMessage.value,
+    tag: `${props.course_id}-${props.week}-${props.assignment_id}`,
+  };
+
+  // Add question_id to tag if content_type is "practice-assignment"
+  if (props.content_type === "practice-assignment") {
+    payload.tag += `-${props.question_id}`;
+  }
+
+  console.log("Generated API Payload:", payload);
+  return payload;
+};
   
-  const handleNewMessage = () => {
-    if (!currentMessage.value.trim()) return;
-  
-    const newMessage = {
-      id: Math.random().toString(36).substring(7),
-      content: currentMessage.value,
-      role: 'user',
-      timestamp: new Date(),
-    };
-  
-    // Mock AI response
+  async function getChatHistory(){
+
+    const response = await axios.get(`http://127.0.0.1:5000/chats/${props.course_id}`,
+      {
+        headers: {
+          'Authentication-Token': store.state.user.token,
+        },
+      }
+  )
+      chats.value = response.data.data.sort((a, b) => a.id - b.id);
+      console.log(chats.value)
+  }
+
+  // this api is for continue chat ----------------------------------------------------------------
+
+  async function ContinueChat(newchat) {
+  console.log(newchat);
+
+  try {
+    const response = await axios.post(
+      `http://127.0.0.1:5000/chats/${props.course_id}/${session_id.value}`, apiPayload.value,
+      {
+        headers: {
+          "Authentication-Token": store.state.user.token,
+        },
+      }
+    );
+
+    // Log the response data
+    console.log(response.data.data);
+
+    // Assign aiResponse correctly using a reactive variable
     const aiResponse = {
       id: Math.random().toString(36).substring(7),
-      content: 'This is a mock AI response. In a real implementation, this would be connected to an AI service.',
+      content: response.data.data.message,
       role: 'assistant',
       timestamp: new Date(),
     };
-  
-    if (!activeChat.value) {
-      const newChat = {
+
+    console.log(chats.value)
+    const chat = chats.value.find(c => c.id === activeChat.value);
+    console.log(chat)
+    if (chat) {
+      chat.messages.push(newMessage.value, aiResponse);
+    }
+
+  } catch (error) {
+    console.error("Error submitting assignment:", error);
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------
+
+
+const handleNewMessage = () => {
+  if (!currentMessage.value.trim()) return;
+
+  console.log(currentMessage.value)
+
+  newMessage.value = {
+    id: Math.random().toString(36).substring(7),
+    content: currentMessage.value,
+    role: 'user',
+    timestamp: new Date(),
+  };
+
+  apiPayload.value = generateApiPayload();
+
+  if (!isChatStarted.value) {
+    // First message: Make API call
+    console.log(apiPayload.value);
+    axios.post(
+      `http://127.0.0.1:5000/chats/${props.course_id}`, apiPayload.value,
+      {
+        headers: {
+          'Authentication-Token': store.state.user.token,
+        },
+      }
+    )
+    .then((Response) => {
+      console.log(Response.data.data);
+
+      const aiResponse = {
         id: Math.random().toString(36).substring(7),
-        messages: [newMessage, aiResponse],
-        title: `Chat ${chats.value.length + 1}`,
+        content: Response.data.data.message,
+        role: 'assistant',
         timestamp: new Date(),
       };
+
+      session_id.value = Response.data.data.session_id;
+      isChatStarted.value = true; // Set flag to true after first API call
+
+      // Create a new chat if none is active
+      const newChat = {
+        id: Math.random().toString(36).substring(7),
+        messages: [newMessage.value, aiResponse],
+        title: session_id.value,
+        timestamp: new Date(),
+      };
+
+      console.log(newChat)
+
       chats.value.push(newChat);
       activeChat.value = newChat.id;
-    } else {
-      const chat = chats.value.find(c => c.id === activeChat.value);
-      if (chat) {
-        chat.messages.push(newMessage, aiResponse);
-      }
+      // Clear input field & scroll down
+      scrollToBottom();
+    })
+    .catch((error) => {
+      console.log("Error:", error.message);
+    });
+
+  } else {
+    ContinueChat();
+  }
+  // Clear the input field
+  currentMessage.value = '';
+  scrollToBottom();
+};
+
+// Function to scroll chat container to bottom
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
-  
-    currentMessage.value = '';
-    
-    // Scroll to bottom after messages update
-    setTimeout(() => {
-      if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-      }
-    }, 0);
-  };
+  });
+};
   
   const downloadChat = (chatId) => {
     const chat = chats.value.find(c => c.id === chatId);
@@ -94,6 +214,8 @@
     activeChat.value = chatId;
     activeTab.value = 'Chat';
   };
+
+  onBeforeMount(getChatHistory);
   </script>
 
 <template>
@@ -125,6 +247,11 @@
                   <span class="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"></span>
                 </div>
                 <h2 class="text-base font-semibold text-primary">AI Assistant</h2>
+                {{ props.content_type }}
+                {{ props.assignment_id }}
+                {{ props.question_id }}
+                {{ props.course_id }}
+                {{ props.week }}
               </div>
               <button
                 @click="isOpen = false"
@@ -177,7 +304,8 @@
                       'bg-accent text-accent-foreground': message.role === 'assistant'
                     }"
                   >
-                    {{ message.content }}
+                    <!-- {{ message.content }} -->
+                    <span v-html=" message.content"></span>
                   </div>
                 </div>
               </div>
@@ -233,7 +361,13 @@
                   </div>
                 </div>
                 <p class="text-xs text-muted-foreground">
-                  {{ chat.messages.length }} messages
+                  Chat {{ chat.id }} 
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{ chat.session_id }} 
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{ chat.time }} 
                 </p>
                 <button
                   @click="continueChat(chat.id)"
