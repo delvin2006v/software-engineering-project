@@ -1,6 +1,9 @@
 # Backend
 
 /Backend/virt
+/Backend/static
+/Backend/instance
+/Backend/application/__pycache__
 
 # Frontend
 
