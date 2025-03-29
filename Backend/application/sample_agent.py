@@ -578,6 +578,9 @@ def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
         }
     if context == 'lecture' :
         response = lecture_history_chain.invoke(info, config=config)
+        links = '\n\n' + format_reference_links(retrieve_reference_links(tag, query))
+        if links :
+            response += links
     elif context == 'practice-assignment':
         response = practice_assignment_history_chain.invoke(info, config=config)
     elif context == 'graded-assignment' :
