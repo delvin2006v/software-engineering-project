@@ -18,13 +18,15 @@ import axios from 'axios'
   const activeTab = ref('Chat');
   const currentMessage = ref('');
   const chats = ref([]);
+  const chats_history = ref([]);
   const activeChat = ref(null);
   const messagesContainer = ref(null);
   const isChatStarted = ref(false); // Tracks if API was called initially
   const apiPayload = ref({})
   const newMessage = ref({})
+  const historychat = ref({});
   const session_id = ref(null)
-  const allChats_history =ref([])
+  const allChats_history =ref('')
   const currentChat = computed(() => {
     console.log(chats.value)
     return chats.value.find(chat => chat.id === activeChat.value) || null;
@@ -41,20 +43,22 @@ const props = defineProps({
 
 // these are the api payloads
 
-const generateApiPayload = () => {
-  const payload = {
-    query: currentMessage.value,
-    tag: `${props.course_id}-${props.week}-${props.assignment_id}`,
+  const generateApiPayload = () => {
+    const payload = {
+      query: currentMessage.value,
+      tag: `${props.course_id}-${props.week}-${props.assignment_id}`,
+    };
+
+    // Add question_id to tag if content_type is "practice-assignment"
+    if (props.content_type === "practice-assignment") {
+      payload.tag += `-${props.question_id}`;
+    }
+
+    console.log("Generated API Payload:", payload);
+    return payload;
   };
 
-  // Add question_id to tag if content_type is "practice-assignment"
-  if (props.content_type === "practice-assignment") {
-    payload.tag += `-${props.question_id}`;
-  }
-
-  console.log("Generated API Payload:", payload);
-  return payload;
-};
+// this is this api to get history chats
   
   async function getChatHistory(){
 
@@ -65,14 +69,26 @@ const generateApiPayload = () => {
         },
       }
   )
-      chats.value = response.data.data.sort((a, b) => a.id - b.id);
-      console.log(chats.value)
+      chats_history.value = response.data.data.sort((b, a) => a.id - b.id);
   }
 
-  // this api is for continue chat ----------------------------------------------------------------
+// this is this api to get history chats
+  
+  async function getChats_on_history(){
+
+  const response = await axios.get(`http://127.0.0.1:5000/chats/${props.course_id}/${historychat.value}`,
+    {
+      headers: {
+        'Authentication-Token': store.state.user.token,
+      },
+    }
+  )
+    allChats_history.value = response.data.data;
+  }
+
+// this api is for continue chat ----------------------------------------------------------------
 
   async function ContinueChat(newchat) {
-  console.log(newchat);
 
   try {
     const response = await axios.post(
@@ -84,9 +100,6 @@ const generateApiPayload = () => {
       }
     );
 
-    // Log the response data
-    console.log(response.data.data);
-
     // Assign aiResponse correctly using a reactive variable
     const aiResponse = {
       id: Math.random().toString(36).substring(7),
@@ -95,11 +108,11 @@ const generateApiPayload = () => {
       timestamp: new Date(),
     };
 
-    console.log(chats.value)
     const chat = chats.value.find(c => c.id === activeChat.value);
-    console.log(chat)
+
     if (chat) {
       chat.messages.push(newMessage.value, aiResponse);
+      getChatHistory()
     }
 
   } catch (error) {
@@ -113,8 +126,6 @@ const generateApiPayload = () => {
 const handleNewMessage = () => {
   if (!currentMessage.value.trim()) return;
 
-  console.log(currentMessage.value)
-
   newMessage.value = {
     id: Math.random().toString(36).substring(7),
     content: currentMessage.value,
@@ -125,8 +136,8 @@ const handleNewMessage = () => {
   apiPayload.value = generateApiPayload();
 
   if (!isChatStarted.value) {
+
     // First message: Make API call
-    console.log(apiPayload.value);
     axios.post(
       `http://127.0.0.1:5000/chats/${props.course_id}`, apiPayload.value,
       {
@@ -136,7 +147,6 @@ const handleNewMessage = () => {
       }
     )
     .then((Response) => {
-      console.log(Response.data.data);
 
       const aiResponse = {
         id: Math.random().toString(36).substring(7),
@@ -156,10 +166,10 @@ const handleNewMessage = () => {
         timestamp: new Date(),
       };
 
-      console.log(newChat)
-
       chats.value.push(newChat);
       activeChat.value = newChat.id;
+      getChatHistory()
+
       // Clear input field & scroll down
       scrollToBottom();
     })
@@ -184,34 +194,66 @@ const scrollToBottom = () => {
   });
 };
   
-  const downloadChat = (chatId) => {
-    const chat = chats.value.find(c => c.id === chatId);
-    if (!chat) return;
-  
-    const content = chat.messages
-      .map(m => `${m.role}: ${m.content}\n`)
-      .join('\n');
-    
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chat-${chat.title}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  
-  const deleteChat = (chatId) => {
-    chats.value = chats.value.filter(chat => chat.id !== chatId);
-    if (activeChat.value === chatId) {
-      activeChat.value = null;
+
+  async function api_download(sessionId) {
+  try {
+      const response = await axios.put(
+        `http://127.0.0.1:5000/chats/${props.course_id}/${sessionId}`,
+        {}, // Empty body (if not needed)
+        {
+          headers: {
+            'Authentication-Token': store.state.user.token,
+          },
+        }
+      );
+      console.log(response.data);
+    } catch (error) {
+      console.error("Error downloading chat:", error.response?.data || error.message);
     }
-  };
+  }
+
+  const downloadChat = (session_id) => {
+    // const chat = chats.value.find(c => c.id === chatId);
+    // if (!chat) return;
   
-  const continueChat = (chatId) => {
-    activeChat.value = chatId;
+    // const content = chat.messages
+    //   .map(m => `${m.role}: ${m.content}\n`)
+    //   .join('\n');
+    
+    // const blob = new Blob([content], { type: 'text/plain' });
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement('a');
+    // a.href = url;
+    // a.download = `chat-${chat.title}.txt`;
+    // document.body.appendChild(a);
+    // a.click();
+    // document.body.removeChild(a);
+    // URL.revokeObjectURL(url);
+    api_download(session_id)
+  };
+
+  async function api_deleteChat(sessionId){
+
+    const response = await axios.delete(`http://127.0.0.1:5000/chats/${props.course_id}/${sessionId}`,
+      {
+        headers: {
+          'Authentication-Token': store.state.user.token,
+        },
+      }
+    )
+      console.log(response.data.status.message);
+      getChatHistory()
+  }
+
+  const deleteChat = (session_id) => {
+    api_deleteChat(session_id)
+  };
+
+  
+  const continueChat = (sessionId) => {
+
+    historychat.value = sessionId
+    getChats_on_history()
     activeTab.value = 'Chat';
   };
 
@@ -289,30 +331,54 @@ const scrollToBottom = () => {
                 ref="messagesContainer"
                 class="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent"
               >
-                <div
-                  v-for="message in currentChat?.messages"
-                  :key="message.id"
-                  :class="{
-                    'flex justify-end': message.role === 'user',
-                    'flex justify-start': message.role === 'assistant'
-                  }"
-                >
+                <div v-if="session_id === historychat || Object.keys(historychat).length === 0">
                   <div
-                    class="rounded-lg px-3 py-2 max-w-[85%] shadow-md transition-all duration-200 hover:scale-[1.02]"
+                    v-for="message in currentChat?.messages"
+                    :key="message.id"
                     :class="{
-                      'bg-primary text-primary-foreground': message.role === 'user',
-                      'bg-accent text-accent-foreground': message.role === 'assistant'
+                      'flex justify-end': message.role === 'user',
+                      'flex justify-start': message.role === 'assistant'
                     }"
                   >
-                    <!-- {{ message.content }} -->
-                    <span v-html=" message.content"></span>
+                    <div
+                      class="rounded-lg px-3 py-2 max-w-[85%] shadow-md transition-all duration-200 hover:scale-[1.02]"
+                      :class="{
+                        'bg-primary text-primary-foreground': message.role === 'user',
+                        'bg-accent text-accent-foreground': message.role === 'assistant'
+                      }"
+                    >
+                      <!-- {{ message.content }} -->
+                      <span v-html=" message.content"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else>
+                  <div
+                    v-for="message in allChats_history?.chat"
+                    :key="message.id"
+                    :class="{
+                      'flex justify-end': message.role === 'user',
+                      'flex justify-start': message.role === 'agent'
+                    }"
+                  >
+                    <div
+                      class="rounded-lg px-3 py-2 max-w-[85%] shadow-md transition-all duration-200 hover:scale-[1.02]"
+                      :class="{
+                        'bg-primary text-primary-foreground': message.role === 'user',
+                        'bg-accent text-accent-foreground': message.role === 'agent'
+                      }"
+                    >
+                      <!-- {{ message.content }} -->
+                      <span v-html=" message.message"></span>
+                    </div>
                   </div>
                 </div>
               </div>
   
               <!-- Input -->
               <div class="border-t border-border/40 p-3 bg-accent/30">
-                <div class="flex gap-2">
+                <div class="flex gap-2" v-if="historychat === session_id || Object.keys(historychat).length === 0">
                   <input
                     v-model="currentMessage"
                     @keyup.enter="handleNewMessage"
@@ -337,7 +403,7 @@ const scrollToBottom = () => {
               class="h-full overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent"
             >
               <div
-                v-for="chat in chats"
+                v-for="chat in chats_history"
                 :key="chat.id"
                 class="rounded-lg border border-border/40 p-3 bg-accent/30 hover:bg-accent/50 transition-all duration-200 hover:scale-[1.02]"
               >
@@ -345,14 +411,14 @@ const scrollToBottom = () => {
                   <h3 class="font-medium text-primary text-sm">{{ chat.title }}</h3>
                   <div class="flex gap-1">
                     <button
-                      @click="downloadChat(chat.id)"
+                      @click="downloadChat(chat.session_id)"
                       class="p-1.5 hover:bg-muted/50 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
                       title="Download chat"
                     >
                       <Download class="h-4 w-4 text-primary" />
                     </button>
                     <button
-                      @click="deleteChat(chat.id)"
+                      @click="deleteChat(chat.session_id)"
                       class="p-1.5 hover:bg-destructive/20 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-destructive/50"
                       title="Delete chat"
                     >
@@ -369,13 +435,19 @@ const scrollToBottom = () => {
                 <p class="text-xs text-muted-foreground">
                   {{ chat.time }} 
                 </p>
-                <button
-                  @click="continueChat(chat.id)"
-                  class="mt-2 w-full rounded-md px-3 py-1.5 bg-accent hover:bg-accent/70 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 text-primary text-sm"
-                >
-                  Continue Chat
-                </button>
-              </div>
+
+                  <button
+                    @click="continueChat(chat.session_id)"
+                    class="mt-2 w-full rounded-md px-3 py-1.5 bg-accent hover:bg-accent/70 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 text-primary text-sm"
+                  >
+                    <div v-if="chat.session_id === session_id" class="text-red-500">
+                      Current Chat
+                    </div>
+                    <div v-else>
+                      Chat History
+                    </div>
+                  </button>
+                </div>
             </div>
           </div>
         </div>

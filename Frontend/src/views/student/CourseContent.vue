@@ -107,6 +107,7 @@ const runCode = async () => {
 
   try {
     code_store.value = code.value
+    console.log(code_store.value, code.value)
     console.log(code_store.value)
     // Simulate code execution (in a real app, this would call your backend)
     const submissionPayload = {

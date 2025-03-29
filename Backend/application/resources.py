@@ -448,6 +448,7 @@ class ChatApi(Resource) :
     @roles_required('student')
     def put(self, course_id, session_id) :
         
+        print(course_id, session_id)
         # check for enrollment
         flag = False
         for course in current_user.courses :
