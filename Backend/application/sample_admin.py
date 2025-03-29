@@ -38,8 +38,8 @@ class MyEmbeddings(Embeddings):
             result = response.json()
             return result
         except:
-            result = None
-            print(response.content)
+            response = requests.post(self.api_url, headers=headers, json=payload)
+            result = response.json()
         if isinstance(result, dict) and result.get("error"):
             raise Exception(f"HuggingFace API error: {result['error']}")
         
@@ -68,10 +68,23 @@ fields =  [
         FieldSchema(name='material_content', dtype=DataType.VARCHAR, max_length=5000)
     ]
 
+fields_2 =  [
+        FieldSchema(name='id', dtype=DataType.INT64, is_primary=True, auto_id=True, max_length=20),
+        FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, dim=512, max_length=512),
+        FieldSchema(name='course_id', dtype=DataType.VARCHAR, max_length=3),
+        FieldSchema(name='title', dtype=DataType.VARCHAR, max_length=500),
+        FieldSchema(name='description', dtype=DataType.VARCHAR, max_length=2000),
+        FieldSchema(name='material_content', dtype=DataType.VARCHAR, max_length=2000)
+    ]
+
 schema = CollectionSchema(fields, description='Course Doc')
+schema_2 = CollectionSchema(fields_2, description='Reference links')
 
 if 'course_docs' not in client.list_collections() :
     collection = client.create_collection('course_docs', schema=schema)
+
+if 'reference_links' not in client.list_collections() :
+    collection2 = client.create_collection('reference_links', schema=schema_2)
 
 index_params = MilvusClient.prepare_index_params()
 
@@ -89,6 +102,48 @@ if 'vector_index' not in client.list_indexes(collection_name='course_docs'):
         index_params=index_params,
         sync=False # Whether to wait for index creation to complete before returning. Defaults to True.
     )
+
+if 'vector_index' not in client.list_indexes(collection_name='reference_links'):
+    client.create_index(
+        collection_name='reference_links',
+        index_params=index_params,
+        sync=False
+    )
+
+if client.get_collection_stats('reference_links')['row_count'] == 0 :
+    links = [
+        {
+            'course_id': '1',
+            'title': 'What is Python? | Python Explained in 2 Minutes For BEGINNERS.',
+            'description': ' how to start learning Python for free and what is python ',
+            'material_content': 'https://www.youtube.com/watch?v=QoIRX37VZpo'
+        },
+        {
+            'course_id': '1',
+            'title': 'Replit in 60 seconds',
+            'description': "Learn how Replit's cloud-native environment, AI-assisted features, and collaborative tools make coding accessible to all skill levels. Explore integrated features like databases and deployments, and even code on your phone with the Replit app ",
+            'material_content': 'https://www.youtube.com/watch?v=TiHq41h3nDo'
+        },
+        {
+            'course_id': '1',
+            'title': 'Python Tutorial in 30 Minutes (Crash Course for Absolute Beginners)',
+            'description': "In this tutorial, we’ll be looking at comments, variables, data types, strings, booleans, operators, lists, tuples, sets, dictionaries, loops, objects and a lot more!!",
+            'material_content': 'https://www.youtube.com/watch?v=WEm3EUdicDg'
+        },
+        {
+            'course_id': '1',
+            'title': 'Python for Everybody (PY4E)',
+            'description': "Everything about python",
+            'material_content': 'https://www.py4e.com/lessons'
+        },
+
+    ]
+
+    print(embedder(links[0]['description']))
+    for link in links :
+        link['embedding'] = embedder(link['description'])
+
+    client.insert(collection_name='reference_links', data=links)
 
 
 def requires_ocr(pdf_path):
@@ -126,13 +181,6 @@ def split_text(pages, chunk_size, chunk_overlap):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     docs = text_splitter.split_documents(pages)
     return docs
-
-def load_or_create_vector_store():
-    """Load or create the vector store."""
-    if os.path.exists(VECTOR_STORE_FILE):
-        return FAISS.load_local(VECTOR_STORE_FILE, embedding_model, allow_dangerous_deserialization=True)
-    else:
-        return None
 
 def update_vector_store(new_docs, course_id, material_name):
     """Update the vector store with new documents."""
@@ -176,6 +224,6 @@ def delete_file(course_id, title):
 
 def update_file(upload_file_path, course_id, old_title, new_title) :
 
-    res = delte_file(course_id, old_title)
+    res = delete_file(course_id, old_title)
 
     res = uploaded_file(upload_file_path, course_id, new_title)

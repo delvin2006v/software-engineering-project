@@ -280,7 +280,7 @@ class MaterialApi(Resource) :
         db.session.delete(material)    
         db.session.commit()
         
-        delete(course_id, material.title)
+        delete_file(course_id, material.title)
         
         return output(200, 'Material deleted successfully')
 
@@ -371,6 +371,8 @@ class ChatOutlineApi(Resource) :
                     break
             if not flag :
                 return output(403, 'Invalid Tag')
+        else :
+            context = 'course'
 
         if context in ['lecture', 'practice-assignment', 'graded-assignment'] :
             response = chatbot(
@@ -480,7 +482,8 @@ class ChatApi(Resource) :
                     break
             if not flag :
                 return output(403, 'Invalid Tag')
-
+        else :
+            context = 'course'
 
         chat = Chat.query.filter_by(course_id=course_id, session_id=session_id, user_id=current_user.id).first()
 

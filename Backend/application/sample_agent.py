@@ -51,12 +51,15 @@ class CustomLLM(LLM):
         }
         response = requests.post(self.api_url, headers=headers, json=payload)
         # return response.text
+        if response.status_code != 200 :
+            response = requests.post(self.api_url, headers=headers, json=payload)
+
         result = response.json()
         
         if isinstance(result, dict) and result.get("error"):
             raise Exception(f"HuggingFace API error: {result['error']}")
         print('\n', '-'*30)
-        print(result)
+        print(str(result[0].get('generated_text', '')))
         print('\n', '-'*30)
         generated_text = result[0].get("generated_text", "")
         return generated_text.split('<-->')[-1].strip('\n ')
@@ -72,7 +75,7 @@ llm = CustomLLM(model_name="google/gemma-2-2b-it")
 def format_history(history: List[BaseMessage]) -> str:
     if not history :
         return None
-    return "\n".join([f"{msg.type}: {msg.content}" for msg in history])
+    return "\n".join([msg.type + ' : ' + msg.content.copy().replace('\n\n\n', '\n').replace('\n\n', '\n').strip('\n ') for msg in history])
 
 def format_transcript(transcript) -> str:
     return "\n".join([f"{msg.text}" for msg in transcript])
@@ -114,6 +117,28 @@ def retrieve_document(course_id, query) :
         return result[0]
     else :
         return None
+
+def retrieve_reference_links(course_id, query):
+    
+    result = client.search(
+        collection_name='reference_links',
+        data=[embedder(query)],
+        filter=f'course_id like \'{course_id}\'',
+        limit=3,
+        output_fields=['title', 'material_content'],
+        search_params={
+                'metric_type': "COSINE"
+        },
+        anns_field='embedding'
+    )
+
+    if len(result) > 0 :
+        return result[0]
+    else :
+        return None
+
+def format_reference_links(links) :
+    return '''**To know more, do visit these links**\n\n ''' + '\n\n'.join([str(x) + '. [' + links[x]['entity']['title'] + '](' + links[x]['entity']['material_content'] + ')' for x in range(len(links))])
 
 def format_items(items) :
     return '\n'.join(str(i) + '. ' + items[i] for i in range(len(items)))
@@ -480,7 +505,6 @@ class FileChatMessageHistory(BaseChatMessageHistory, BaseModel):
         self.load_messages()
 
     def add_message(self, message) -> None:
-        message.content = message.content.replace('\n\n\n', '\n').replace('\n\n', '\n')
         self.messages.append(message)
         messages = dict_from_messages(self.messages)
         store_dict[self.session_id] = messages
@@ -562,7 +586,10 @@ def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
         info['code'] = code
         response = programming_assignment_history_chain.invoke(info, config=config)
     elif context == 'course':
-        response = course_doubt_chain.invoke(info, config=config)
+        response = course_doubt_history_chain.invoke(info, config=config)
+        links = '\n\n' + format_reference_links(retrieve_reference_links(tag, query))
+        if links :
+            response += links
 
     return {
         'message': response,
