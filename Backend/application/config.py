@@ -1,6 +1,6 @@
 class LocalConfig :
 
-    DEBUG = True
+    DEBUG = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///../instance/database.db"
     SECRET_KEY = "THIS-IS-A-SECRET-KEY"
     SECURITY_PASSWORD_SALT = "too-salty"

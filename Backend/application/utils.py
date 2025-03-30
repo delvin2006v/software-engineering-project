@@ -106,7 +106,7 @@ def evaluate_submission(key, response) :
 
 # Export chat as pdf
 def export_chat(history, session_id) :
-    chat = history[session_id]
+    chat = history
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font('Arial', size=12)
