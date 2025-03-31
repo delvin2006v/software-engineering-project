@@ -305,7 +305,7 @@ def get_by_session_id(session_id: str) -> BaseChatMessageHistory:
 
 
 embedding_model = MyEmbeddings()
-llm = CustomLLM(model_name="Qwen/Qwen1.5-1.8B-Chat")
+llm = CustomLLM(model_name="tiiuae/falcon-7b-instruct")
 vectorstore = FAISS.load_local(
     r'E:\chat\soft-engg-project-jan-2025-se-Jan-37\Backend\application\vector_store.bin',
     embedding_model,
