@@ -234,7 +234,7 @@ load_dotenv()
 
 # Embedding class
 class MyEmbeddings:
-    def __init__(self, model_name="jinaai/jina-embeddings-v2-small-en"):
+    def __init__(self, model_name="intfloat/e5-small-v2"):
         self.model = SentenceTransformer(model_name, trust_remote_code=True)
 
     def __call__(self, text):
@@ -305,7 +305,7 @@ def get_by_session_id(session_id: str) -> BaseChatMessageHistory:
 
 
 embedding_model = MyEmbeddings()
-llm = CustomLLM(model_name="tiiuae/falcon-7b-instruct")
+llm = CustomLLM(model_name="Qwen/Qwen1.5-1.8B-Chat")
 vectorstore = FAISS.load_local(
     r'E:\chat\soft-engg-project-jan-2025-se-Jan-37\Backend\application\vector_store.bin',
     embedding_model,
@@ -464,24 +464,42 @@ def chatbot(user_context, user_query, session_id):
         return f"Processing Error: {str(e)}"
 
 
+# def export_chat_as_pdf(session_id):
+#     history = get_by_session_id(session_id)
+#     pdf = FPDF()
+#     pdf.add_page()
+#     pdf.set_font("Arial", size=12)
+#     for msg in history.messages:
+#         if isinstance(msg, HumanMessage):
+#             pdf.cell(200, 10, txt=f"User: {msg.content}", ln=True)
+#         elif isinstance(msg, AIMessage):
+#             pdf.cell(200, 10, txt=f"Bot: {msg.content}", ln=True)
+#     pdf.output(f"chat_history_{session_id}.pdf")
+
 def export_chat_as_pdf(session_id):
     history = get_by_session_id(session_id)
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
+
     for msg in history.messages:
         if isinstance(msg, HumanMessage):
-            pdf.cell(200, 10, txt=f"User: {msg.content}", ln=True)
+            text = f"User: {msg.content}"
         elif isinstance(msg, AIMessage):
-            pdf.cell(200, 10, txt=f"Bot: {msg.content}", ln=True)
+            text = f"Bot: {msg.content}"
+        else:
+            continue
+        
+        pdf.multi_cell(0, 10, txt=text)  # Use multi_cell to wrap text properly
+
     pdf.output(f"chat_history_{session_id}.pdf")
 
 
 if __name__ == "__main__":
-    session_id = "test_session"
+    session_id = "te_session"
     response = chatbot(
-        user_context="lecture",
-        user_query="Explain Newton's laws of motion",
+        user_context="programming",
+        user_query="Write a Python function to determine whether a given number is a Happy Number.A Happy Number is defined as follows:Start with any positive integer.Replace the number by the sum of the squares of its digits.Repeat the process until the number equals 1 (where it will stay), or it loops endlessly in a cycle that does not include 1.If it reaches 1, the number is Happy; otherwise, it is Unhappy.",
         session_id=session_id
     )
     print(response)

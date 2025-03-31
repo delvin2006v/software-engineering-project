@@ -10,7 +10,8 @@ from langchain_community.document_loaders import PyPDFLoader
 
 # Custom embedding class SentenceTransformer
 class MyEmbeddings:
-    def __init__(self, model_name="jinaai/jina-embeddings-v2-small-en"):
+    # def __init__(self, model_name="jinaai/jina-embeddings-v2-small-en"):
+    def __init__(self, model_name="intfloat/e5-small-v2"):
         self.model = SentenceTransformer(model_name, trust_remote_code=True)
 
     def __call__(self, text):
