@@ -88,11 +88,16 @@ const props = defineProps({
 
 // this api is for continue chat ----------------------------------------------------------------
 
-  async function ContinueChat(newchat) {
-
+async function ContinueChat(newchat) {
   try {
+    const isSessionChat = session_id.value === historychat.value || Object.keys(historychat.value).length === 0;
+    const chatId = isSessionChat ? session_id.value : historychat.value;
+
+    console.log(apiPayload.value);
+
     const response = await axios.post(
-      `http://127.0.0.1:5000/chats/${props.course_id}/${session_id.value}`, apiPayload.value,
+      `http://127.0.0.1:5000/chats/${props.course_id}/${chatId}`,
+      apiPayload.value,
       {
         headers: {
           "Authentication-Token": store.state.user.token,
@@ -100,23 +105,26 @@ const props = defineProps({
       }
     );
 
-    // Assign aiResponse correctly using a reactive variable
-    const aiResponse = {
-      id: Math.random().toString(36).substring(7),
-      content: response.data.data.message,
-      role: 'assistant',
-      timestamp: new Date(),
-    };
+    if (isSessionChat) {
+      // Assign aiResponse correctly using a reactive variable
+      const aiResponse = {
+        id: Math.random().toString(36).substring(7),
+        content: response.data.data.message,
+        role: "assistant",
+        timestamp: new Date(),
+      };
 
-    const chat = chats.value.find(c => c.id === activeChat.value);
+      const chat = chats.value.find((c) => c.id === activeChat.value);
 
-    if (chat) {
-      chat.messages.push(newMessage.value, aiResponse);
-      getChatHistory()
+      if (chat) {
+        chat.messages.push(newMessage.value, aiResponse);
+        getChatHistory();
+      }
+    } else {
+      getChats_on_history();
     }
-
   } catch (error) {
-    console.error("Error submitting assignment:", error);
+    console.error("Error submitting chat:", error);
   }
 }
 
@@ -289,11 +297,7 @@ const scrollToBottom = () => {
                   <span class="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"></span>
                 </div>
                 <h2 class="text-base font-semibold text-primary">AI Assistant</h2>
-                {{ props.content_type }}
-                {{ props.assignment_id }}
-                {{ props.question_id }}
-                {{ props.course_id }}
-                {{ props.week }}
+                <p>{{ props.content_type }}.{{ props.week }}.{{ props.assignment_id }}.{{ props.question_id }}</p>
               </div>
               <button
                 @click="isOpen = false"
@@ -378,7 +382,7 @@ const scrollToBottom = () => {
   
               <!-- Input -->
               <div class="border-t border-border/40 p-3 bg-accent/30">
-                <div class="flex gap-2" v-if="historychat === session_id || Object.keys(historychat).length === 0">
+                <div class="flex gap-2">
                   <input
                     v-model="currentMessage"
                     @keyup.enter="handleNewMessage"
