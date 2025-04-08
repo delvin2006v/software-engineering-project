@@ -139,7 +139,6 @@ if client.get_collection_stats('reference_links')['row_count'] == 0 :
 
     ]
 
-    print(embedder(links[0]['description']))
     for link in links :
         link['embedding'] = embedder(link['description'])
 

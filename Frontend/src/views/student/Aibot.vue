@@ -9,6 +9,7 @@
     Send,
     Download,
     Trash2,
+    ArrowRightFromLine
   } from 'lucide-vue-next';
   
 import axios from 'axios'
@@ -38,8 +39,12 @@ const props = defineProps({
   assignment_id: Number,
   question_id: Number,
   course_id: Number,
-  week: Number
+  week: Number,
+  scode: String
 });
+
+// Define emit
+const emits = defineEmits(['closepopup'])
 
 // these are the api payloads
 
@@ -52,6 +57,10 @@ const props = defineProps({
     // Add question_id to tag if content_type is "practice-assignment"
     if (props.content_type === "practice-assignment") {
       payload.tag += `-${props.question_id}`;
+    }
+
+    if (props.content_type === "programming-assignment") {
+      payload.code = props.scode;	
     }
 
     console.log("Generated API Payload:", payload);
@@ -195,7 +204,7 @@ const scrollToBottom = () => {
 };
   
 
-  async function api_download(sessionId) {
+  async function api_download(sessionId, chat_id) {
   try {
       const response = await axios.put(
         `http://127.0.0.1:5000/chats/${props.course_id}/${sessionId}`,
@@ -206,13 +215,20 @@ const scrollToBottom = () => {
           },
         }
       );
-      console.log(response.data);
+      if (response.data.status.code == 200) {
+     	 console.log(chats_history.value.map((x)=> {
+		if(x.id == chat_id) {
+			x.path = response.data.data.path.split('/')[3]	
+		};
+		return x;
+		}))
+	}
     } catch (error) {
       console.error("Error downloading chat:", error.response?.data || error.message);
     }
   }
 
-  const downloadChat = (session_id) => {
+  const downloadChat = (session_id, chat_id) => {
     // const chat = chats.value.find(c => c.id === chatId);
     // if (!chat) return;
   
@@ -229,7 +245,7 @@ const scrollToBottom = () => {
     // a.click();
     // document.body.removeChild(a);
     // URL.revokeObjectURL(url);
-    api_download(session_id)
+    api_download(session_id, chat_id)
   };
 
   async function api_deleteChat(sessionId){
@@ -296,7 +312,7 @@ const scrollToBottom = () => {
                 {{ props.week }}
               </div>
               <button
-                @click="isOpen = false"
+                @click="isOpen = false;$emit('closepopup')"
                 class="rounded-full p-1.5 hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <X class="h-4 w-4 text-primary" />
@@ -410,12 +426,22 @@ const scrollToBottom = () => {
                 <div class="flex items-center justify-between mb-2">
                   <h3 class="font-medium text-primary text-sm">{{ chat.title }}</h3>
                   <div class="flex gap-1">
-                    <button
-                      @click="downloadChat(chat.session_id)"
+                    <a
+		      v-if="chat.path"
                       class="p-1.5 hover:bg-muted/50 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
                       title="Download chat"
+		      :href="'http://localhost:5000/static/exports/' + chat.path"
+		      :download='chat.path'
+		      target="_blank"
                     >
-                      <Download class="h-4 w-4 text-primary" />
+                      <Download  class="h-4 w-4 text-primary" />
+                    </a>
+		   <button
+                      @click="downloadChat(chat.session_id, chat.id)"
+                      class="p-1.5 hover:bg-muted/50 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      title="Export chat"
+                    >
+                      <ArrowRightFromLine class="h-4 w-4 text-primary" />
                     </button>
                     <button
                       @click="deleteChat(chat.session_id)"

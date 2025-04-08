@@ -110,7 +110,7 @@ const runCode = async () => {
     console.log(code_store.value, code.value)
     console.log(code_store.value)
     // Simulate code execution (in a real app, this would call your backend)
-    const submissionPayload = {
+    let submissionPayload = {
       assignment_id: `${courseId}-${expandedWeeks.value}-${selectedContent.value.id}`,
       content: code_store.value, // Store content as expected JSON format
     };
@@ -348,7 +348,7 @@ onBeforeMount(fetchCourseData);
                           </div>
                         </div>
                       </div>
-                      <Aibot :content_type=selectedContent.type :assignment_id=selectedContent.id :course_id=Number(courseId) :week="expandedWeeks[0]"/>
+                      <Aibot :scode="code"  :content_type=selectedContent.type :assignment_id=selectedContent.id :course_id=Number(courseId) :week="expandedWeeks[0]"/>
 
                       <!-- Code Editor -->
                       <div class="bg-card text-card-foreground rounded-lg shadow-md overflow-hidden">
@@ -464,12 +464,7 @@ onBeforeMount(fetchCourseData);
                 </div>
 
                 <!-- AI Bot Popup Modal -->
-                <div v-if="showAIBotPopup" class="aibot-popup">
-                  <div class="popup-content">
-                    <button class="close-button" @click="closeAIBot">&times;</button>
-                    <Aibot :content_type="selectedContent.type" :assignment_id="selectedContent.id" :question_id="activeQuestionId" :course_id=Number(courseId) :week="expandedWeeks[0]"/>
-                  </div>
-                </div>
+                    <Aibot v-if="showAIBotPopup" @closepopup="closeAIBot" :content_type="selectedContent.type" :assignment_id="selectedContent.id" :question_id="activeQuestionId" :course_id=Number(courseId) :week="expandedWeeks[0]"/>
 
                 <!-- Submit Assignment Button -->
                 <button @click="submitAssignment"

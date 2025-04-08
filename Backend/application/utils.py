@@ -1,6 +1,6 @@
+from flask import request, url_for
 from functools import wraps
 from flask_security import current_user
-from flask import request, url_for
 from .models import Token
 from .extensions import security
 import subprocess
@@ -107,19 +107,62 @@ def evaluate_submission(key, response) :
 # Export chat as pdf
 def export_chat(history, session_id) :
     chat = history
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font('Arial', size=12)
+    html_str = '''<style>#chat-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.message {
+  width: fit-content;
+  max-width: 70%;
+  margin: 10px 0;
+  padding: 10px 16px;
+  border-radius: 15px;
+  position: relative;
+  border: 1px solid black;
+}
+
+.incoming {
+  background: #f1f1f1;
+  margin-right: auto;
+  color: black
+}
+
+.outgoing {
+  background: #0084ff;
+  color: white;
+  margin-left: auto;
+}
+
+.timestamp {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+/* Markdown content styling within messages */
+.message .content h1 {
+  font-size: 1.2rem;
+  margin: 5px 0;
+}
+
+.message .content ul {
+  padding-left: 20px;
+}
+</style><div id="chat-container">'''
 
     for message in chat :
-        height = len(message['message'].split('\n')) + 6
+        align = 'incoming'
         if message['role'] == 'user' :
-            pdf.cell(50)
-            pdf.cell(0, height, message['message'], ln=1, align='R')
-        else :
-            pdf.cell(0, height, message['message'], ln=1, align='L')
-        pdf.cell(0, 10, ln=1)
+            align = 'outgoing'
+        html_str += (f'<div class="message {align}"><div class="content">' + message['message'] + '</div></div>')
+    html_str += '</div>'
+    print(export_dir)
 
-    pdf.output(export_dir + '/' + str(session_id) + '.pdf')
+    with open(export_dir + '/' + str(session_id) + '.html', 'w') as f:
+        f.write(html_str)
+        f.close()
 
-    return url_for('static', filename='exports/' + str(session_id) + '.pdf')
+    return url_for('static', filename='exports/' + str(session_id) + '.html')

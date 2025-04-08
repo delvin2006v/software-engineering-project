@@ -567,6 +567,6 @@ class ChatApi(Resource) :
 
         if not chat :
             return output(404, 'Chat history not found')
-        path = export_chat(fetch_history(session_id, False), session_id)
+        path = export_chat(fetch_history(session_id, True), session_id)
 
         return output(200, 'Chat exported successfully', {'path': path})
