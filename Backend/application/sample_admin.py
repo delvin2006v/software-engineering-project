@@ -36,15 +36,12 @@ class MyEmbeddings(Embeddings):
         response = requests.post(self.api_url, headers=headers, json=payload)
         try:
             result = response.json()
-            return result
         except:
             response = requests.post(self.api_url, headers=headers, json=payload)
             result = response.json()
         if isinstance(result, dict) and result.get("error"):
             raise Exception(f"HuggingFace API error: {result['error']}")
-        
-        generated_text = result[0].get("generated_text", "")
-        return generated_text
+        return result
     def __call__(self, text):
         return self.encode(text)
 
@@ -185,6 +182,8 @@ def update_vector_store(new_docs, course_id, material_name):
     """Update the vector store with new documents."""
     records = []
     for doc in new_docs :
+        print(embedder(doc.page_content))
+        break
         records.append({
             'embedding': embedder(doc.page_content),
             'course_id': str(course_id),

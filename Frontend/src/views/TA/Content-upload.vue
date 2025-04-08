@@ -224,7 +224,7 @@ onBeforeMount(previousCourses)
                 >
                   <div>
                     <h3 class="font-medium group-hover:text-primary transition-colors">{{ upload.title }}</h3>
-                    <p class="text-sm text-muted-foreground">{{ upload.fileName }}</p>
+                    <a :href="'http://localhost:5000' + upload.fileName" target="_blank" class="text-sm text-muted-foreground">{{ upload.fileName }}</a>
                     <div class="flex items-center gap-2 text-xs text-muted-foreground">
                       <Clock class="w-3 h-3" />
                       <span>{{ upload.date }}</span>
