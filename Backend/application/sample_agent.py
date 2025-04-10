@@ -138,6 +138,9 @@ def retrieve_reference_links(course_id, query):
         return None
 
 def format_reference_links(links) :
+    print(links)
+    if len(links) == 0 :
+        return ''
     return '''**To know more, do visit these links**\n\n ''' + '\n\n'.join([str(x) + '. [' + links[x]['entity']['title'] + '](' + links[x]['entity']['material_content'] + ')' for x in range(len(links))])
 
 def format_items(items) :
@@ -578,7 +581,7 @@ def chatbot(context, tag, query, session_id=None, code=None, resources=0) :
         }
     if context == 'lecture' :
         response = lecture_history_chain.invoke(info, config=config)
-        links = '\n\n' + format_reference_links(retrieve_reference_links(tag, query))
+        links = '\n\n' + format_reference_links(retrieve_reference_links(tag.split('-')[0], query))
         if links :
             response += links
     elif context == 'practice-assignment':
