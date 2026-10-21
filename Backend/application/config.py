@@ -1,6 +1,6 @@
 class LocalConfig :
 
-    DEBUG = True
+    DEBUG = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///../instance/database.db"
     SECRET_KEY = "THIS-IS-A-SECRET-KEY"
     SECURITY_PASSWORD_SALT = "too-salty"
@@ -10,3 +10,8 @@ class LocalConfig :
     SECURITY_TOKEN_AUTHENTICATION_HEADER = 'Authentication-Token'
     SECURITY_LOGIN_WITHOUT_CONFIRMATION = True
     SECURITY_REDIRECT_BEHAVIOR = 'spa'
+
+class TestConfig(LocalConfig) :
+    
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///../instance/testdb.db'
+
